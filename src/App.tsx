@@ -1,0 +1,100 @@
+import { useState, useEffect } from 'react'
+import { Sidebar } from './components/Sidebar'
+import { WikiBrowser } from './components/WikiBrowser'
+import { ChatInterface } from './components/ChatInterface'
+import { IngestionPanel } from './components/IngestionPanel'
+import { SettingsPanel } from './components/SettingsPanel'
+import { useWikiStore } from './store/useWikiStore'
+import { useConfigStore } from './store/useConfigStore'
+import type { AppView } from './types'
+import './App.css'
+import './components/Sidebar.css'
+
+const fileOps = {
+  readFile: async (path: string): Promise<string> => {
+    try {
+      const { readTextFile } = await import('@tauri-apps/plugin-fs')
+      return await readTextFile(path)
+    } catch {
+      try {
+        const res = await fetch(`/static/${path}`)
+        if (res.ok) return await res.text()
+      } catch {}
+      return ''
+    }
+  },
+  writeFile: async (path: string, content: string): Promise<void> => {
+    try {
+      const { writeTextFile } = await import('@tauri-apps/plugin-fs')
+      await writeTextFile(path, content)
+    } catch {
+      console.warn('File write not available in browser mode')
+    }
+  },
+  listDir: async (path: string): Promise<string[]> => {
+    try {
+      const { readDir } = await import('@tauri-apps/plugin-fs')
+      const entries = await readDir(path)
+      return entries.map(e => e.name)
+    } catch {
+      return []
+    }
+  },
+  createDir: async (_path: string): Promise<void> => {
+    console.warn('Directory creation not available in browser mode')
+  },
+  fileExists: async (path: string): Promise<boolean> => {
+    try {
+      const { readTextFile } = await import('@tauri-apps/plugin-fs')
+      await readTextFile(path)
+      return true
+    } catch {
+      return false
+    }
+  },
+}
+
+export default function App() {
+  const [activeView, setActiveView] = useState<AppView>('wiki')
+  const initWiki = useWikiStore(s => s.init)
+  const initConfig = useConfigStore(s => s.init)
+  const wikiInitialized = useWikiStore(s => s.initialized)
+  const configInitialized = useConfigStore(s => s.initialized)
+
+  useEffect(() => {
+    initWiki(fileOps)
+    initConfig(fileOps)
+  }, [initWiki, initConfig])
+
+  const renderView = () => {
+    if (!wikiInitialized || !configInitialized) {
+      return (
+        <div className="loading-screen">
+          <div className="spinner" />
+          <p>Initializing LLM Wiki...</p>
+        </div>
+      )
+    }
+    switch (activeView) {
+      case 'wiki':
+        return <WikiBrowser />
+      case 'chat':
+        return <ChatInterface />
+      case 'ingestion':
+        return <IngestionPanel />
+      case 'settings':
+        return <SettingsPanel />
+      default:
+        return <WikiBrowser />
+    }
+  }
+
+  return (
+    <div className="app-container">
+      <Sidebar activeView={activeView} onNavigate={setActiveView} />
+      <main className="main-content">
+        {renderView()}
+      </main>
+    </div>
+  )
+}
