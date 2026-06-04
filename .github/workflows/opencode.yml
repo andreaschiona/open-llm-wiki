@@ -1,0 +1,63 @@
+name: opencode
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+
+concurrency:
+  group: ${{ github.event_name }}-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  opencode:
+    if: >
+      contains(github.event.comment.body, '/oc') ||
+      contains(github.event.comment.body, '/opencode')
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    permissions:
+      id-token: write
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Configure git identity
+        run: |
+          git config user.email "opencode@github.actions"
+          git config user.name "opencode"
+
+      - name: Install opencode
+        run: |
+          curl -fsSL https://opencode.ai/install | bash
+          echo "$HOME/.opencode/bin" >> $GITHUB_PATH
+
+      - name: Detect model from comment
+        id: detect
+        env:
+          COMMENT: ${{ github.event.comment.body }}
+        run: |
+          if echo "$COMMENT" | grep -qi "GEMINI"; then
+            echo "model=google/gemini-2.5-flash" >> "$GITHUB_OUTPUT"
+          elif echo "$COMMENT" | grep -qi "BIGPICKLE"; then
+            echo "model=opencode/big-pickle" >> "$GITHUB_OUTPUT"
+          elif echo "$COMMENT" | grep -qi "NEMOTRON"; then
+            echo "model=opencode/nemotron-3-super-free" >> "$GITHUB_OUTPUT"
+          else
+            echo "model=opencode/deepseek-v4-flash-free" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run opencode
+        run: opencode github run
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MODEL: ${{ steps.detect.outputs.model }}
+          USE_GITHUB_TOKEN: "true"
