@@ -129,6 +129,12 @@ jobs:
       - name: Build Tauri app
         run: npm run tauri build
 
+      - name: Create portable archive (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path src-tauri/target/release/open-llm-wiki.exe -DestinationPath "Open.LLM.Wiki_${{ needs.release.outputs.new_version }}_x64_portable.zip"
+
       - name: Upload release artifacts
         uses: softprops/action-gh-release@v3
         with:
@@ -140,3 +146,4 @@ jobs:
             src-tauri/target/release/bundle/**/*.dmg
             src-tauri/target/release/bundle/**/*.msi
             src-tauri/target/release/bundle/**/*.exe
+            *.zip
