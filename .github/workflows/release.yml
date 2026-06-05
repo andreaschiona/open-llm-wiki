@@ -124,7 +124,9 @@ jobs:
           "
 
       - name: Generate all icon formats
-        run: npx tauri icon icon.png
+        run: |
+          npx tauri icon icon.png
+          if [ -d icons ]; then cp -r icons/* src-tauri/icons/ 2>/dev/null || true; fi
 
       - name: Build Tauri app
         run: npm run tauri build

@@ -65,9 +65,10 @@ Prebuilt installers are available on the [Releases page](https://github.com/andr
 | macOS | `.dmg` (Intel & Apple Silicon) |
 | Linux | `.deb` / `.AppImage` |
 
-> **Windows SmartScreen**: The `.exe` installer is not code-signed and may be blocked. Workarounds:
-> - Use the **`.msi`** file (Windows Installer) — usually allowed with a "Run anyway" prompt
-> - Use the **`.zip`** portable version — extract and run `open-llm-wiki.exe` directly (no installer, no SmartScreen)
+> **Windows SmartScreen/Defender**: The app is not code-signed. Workarounds:
+> - Use the **`.msi`** file (Windows Installer) — usually allowed
+> - Use the **`.zip`** portable version — extract and run directly (no installer)
+> - If the app is blocked even after install, add an exclusion in **Windows Security → Virus & threat protection → Manage settings → Exclusions**
 
 ### Build from Source
 
