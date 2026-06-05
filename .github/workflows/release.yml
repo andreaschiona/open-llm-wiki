@@ -91,7 +91,7 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm ci || echo 'no package.json'
+        run: npm install
 
       - name: Build
         run: echo 'build not configured'
