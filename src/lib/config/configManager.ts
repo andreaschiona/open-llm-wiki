@@ -1,4 +1,4 @@
-import type { LLMProviderConfig, LLMModel } from '../../types'
+import type { LLMProviderConfig } from '../../types'
 import { logger } from '../utils/logger'
 import { FREE_MODELS } from '../llm/openRouter'
 
@@ -15,7 +15,6 @@ export class ConfigManager {
   private providers: LLMProviderConfig[] = []
   private activeProviderId: string | null = null
   private fileOps: FileOps
-  private initialized = false
 
   constructor(fileOps: FileOps) {
     this.fileOps = fileOps
@@ -40,7 +39,6 @@ export class ConfigManager {
     } else {
       await this.createDefault()
     }
-    this.initialized = true
     logger.info('ConfigManager', `Loaded ${this.providers.length} providers`)
   }
 

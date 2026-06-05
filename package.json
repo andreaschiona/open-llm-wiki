@@ -21,6 +21,7 @@
     "remark-gfm": "^4.0.0",
     "zustand": "^4.5.4",
     "fuse.js": "^7.0.0",
+    "pdfjs-dist": "^4.0.379",
     "turndown": "^7.2.0"
   },
   "devDependencies": {

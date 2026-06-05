@@ -2,7 +2,7 @@ import type { LLMProvider } from '../llm/provider'
 import { WikiManager } from '../wiki/wikiManager'
 import { WikiIndex } from '../wiki/wikiIndex'
 import { logger } from '../utils/logger'
-import type { IngestionTask, LogEntry } from '../../types'
+import type { LogEntry } from '../../types'
 
 export interface PipelineProgress {
   taskId: string
@@ -112,7 +112,7 @@ Document title: ${title}`
     return response.content
   }
 
-  private async extractEntities(rawContent: string, pageSlug: string, title: string): Promise<void> {
+  private async extractEntities(rawContent: string, _pageSlug: string, title: string): Promise<void> {
     const systemPrompt = `You are an entity extractor. Given a document, extract the main entities and concepts mentioned.
 For each entity/concept, provide a brief description (1-2 sentences).
 Format as JSON array: [{"name": "...", "type": "entity|concept", "description": "..."}]`

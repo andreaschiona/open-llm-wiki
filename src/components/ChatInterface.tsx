@@ -94,11 +94,11 @@ ${wikiContext || 'No relevant wiki pages found.'}`
         },
       )
 
-      const messages = useChatStore.getState().messages
-      const lastIdx = messages.length - 1
-      if (lastIdx >= 0 && messages[lastIdx].role === 'assistant') {
-        messages[lastIdx].content = response.content
-        useChatStore.setState({ messages: [...messages] })
+      const finalMessages = useChatStore.getState().messages
+      const lastIdx = finalMessages.length - 1
+      if (lastIdx >= 0 && finalMessages[lastIdx].role === 'assistant') {
+        finalMessages[lastIdx].content = response.content
+        useChatStore.setState({ messages: [...finalMessages] })
       }
     } catch (err) {
       addMessage({

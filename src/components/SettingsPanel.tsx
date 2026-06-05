@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useConfigStore } from '../store/useConfigStore'
 import { createProvider } from '../lib/llm/providerFactory'
 import type { LLMProviderConfig } from '../types'

@@ -1,11 +1,10 @@
 import type { LLMProvider, ChatRequest, ChatResponse } from './provider'
 import type { LLMModel } from '../../types'
-import { logger } from '../utils/logger'
 
 export class OpenAIProvider implements LLMProvider {
-  readonly id = 'openai'
-  readonly name = 'OpenAI Compatible'
-  readonly type = 'openai'
+  readonly id: string = 'openai'
+  readonly name: string = 'OpenAI Compatible'
+  readonly type: string = 'openai'
 
   private baseUrl: string
   private apiKey: string
