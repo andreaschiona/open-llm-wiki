@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useConfigStore } from '../store/useConfigStore'
+import { useUpdateStore } from '../store/useUpdateStore'
 import { createProvider } from '../lib/llm/providerFactory'
 import type { LLMProviderConfig } from '../types'
 
@@ -19,6 +20,9 @@ export function SettingsPanel() {
     removeProvider,
     setActiveProvider,
   } = useConfigStore()
+
+  const updateInfo = useUpdateStore(s => s.updateInfo)
+  const checkForUpdates = useUpdateStore(s => s.checkForUpdates)
 
   const [editing, setEditing] = useState<LLMProviderConfig | null>(null)
   const [showNew, setShowNew] = useState(false)
@@ -85,6 +89,60 @@ export function SettingsPanel() {
   return (
     <div className="settings-panel">
       <h2>Settings</h2>
+
+      <section className="settings-section">
+        <div className="settings-section-header">
+          <h3>Version</h3>
+          <button
+            className="btn btn-small"
+            onClick={checkForUpdates}
+            disabled={updateInfo.status === 'checking'}
+          >
+            {updateInfo.status === 'checking' ? 'Checking...' : 'Check Now'}
+          </button>
+        </div>
+        <div className="version-info">
+          <div className="version-row">
+            <span className="version-label">Current version</span>
+            <span className="version-value">{updateInfo.currentVersion}</span>
+          </div>
+          {updateInfo.status === 'checking' && (
+            <div className="version-status checking">
+              <div className="spinner-small" />
+              <span>Checking for updates...</span>
+            </div>
+          )}
+          {updateInfo.status === 'available' && (
+            <div className="version-status available">
+              <span>Update available: {updateInfo.latestVersion}</span>
+              {updateInfo.latestUrl && (
+                <a
+                  href={updateInfo.latestUrl}
+                  className="btn btn-small"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    window.open(updateInfo.latestUrl!, '_blank')
+                  }}
+                >
+                  Download
+                </a>
+              )}
+            </div>
+          )}
+          {updateInfo.status === 'up-to-date' && updateInfo.latestVersion && (
+            <div className="version-status up-to-date">
+              <span>Up to date ({updateInfo.latestVersion})</span>
+            </div>
+          )}
+          {updateInfo.status === 'error' && (
+            <div className="version-status error">
+              <span>Check failed: {updateInfo.error}</span>
+            </div>
+          )}
+        </div>
+      </section>
 
       <section className="settings-section">
         <div className="settings-section-header">

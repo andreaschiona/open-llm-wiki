@@ -6,6 +6,7 @@ import { IngestionPanel } from './components/IngestionPanel'
 import { SettingsPanel } from './components/SettingsPanel'
 import { useWikiStore } from './store/useWikiStore'
 import { useConfigStore } from './store/useConfigStore'
+import { useUpdateStore } from './store/useUpdateStore'
 import type { AppView } from './types'
 import './App.css'
 import './components/Sidebar.css'
@@ -60,11 +61,19 @@ export default function App() {
   const initConfig = useConfigStore(s => s.init)
   const wikiInitialized = useWikiStore(s => s.initialized)
   const configInitialized = useConfigStore(s => s.initialized)
+  const checkForUpdates = useUpdateStore(s => s.checkForUpdates)
 
   useEffect(() => {
     initWiki(fileOps)
     initConfig(fileOps)
   }, [initWiki, initConfig])
+
+  useEffect(() => {
+    if (wikiInitialized && configInitialized) {
+      const timer = setTimeout(() => checkForUpdates(), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [wikiInitialized, configInitialized, checkForUpdates])
 
   const renderView = () => {
     if (!wikiInitialized || !configInitialized) {
