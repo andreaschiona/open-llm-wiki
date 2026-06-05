@@ -124,6 +124,7 @@ jobs:
           "
 
       - name: Generate all icon formats
+        shell: bash
         run: |
           npx tauri icon icon.png
           if [ -d icons ]; then cp -r icons/* src-tauri/icons/ 2>/dev/null || true; fi
