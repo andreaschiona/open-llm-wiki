@@ -63,3 +63,19 @@
 .sidebar-label {
   font-size: 14px;
 }
+
+.sidebar-item {
+  position: relative;
+}
+
+.update-badge {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--error);
+  box-shadow: 0 0 4px var(--error);
+}

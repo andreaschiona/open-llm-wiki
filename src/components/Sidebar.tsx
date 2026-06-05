@@ -1,3 +1,4 @@
+import { useUpdateStore } from '../store/useUpdateStore'
 import type { AppView } from '../types'
 
 interface SidebarProps {
@@ -13,6 +14,8 @@ const navItems: { view: AppView; label: string; icon: string }[] = [
 ]
 
 export function Sidebar({ activeView, onNavigate }: SidebarProps) {
+  const updateStatus = useUpdateStore(s => s.updateInfo.status)
+
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
@@ -27,6 +30,9 @@ export function Sidebar({ activeView, onNavigate }: SidebarProps) {
           >
             <span className="sidebar-icon">{item.icon}</span>
             <span className="sidebar-label">{item.label}</span>
+            {item.view === 'settings' && updateStatus === 'available' && (
+              <span className="update-badge" title="Update available" />
+            )}
           </button>
         ))}
       </nav>
