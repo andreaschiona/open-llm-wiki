@@ -16,6 +16,7 @@ export function Sidebar({ activeView, onNavigate }: SidebarProps) {
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
+        <img src="/app-icon.svg" alt="LLM Wiki" className="sidebar-logo" />
         <h1 className="sidebar-title">LLM Wiki</h1>
       </div>
       <nav className="sidebar-nav">
