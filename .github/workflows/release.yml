@@ -53,12 +53,13 @@ jobs:
           NEW_VERSION="$MAJOR.$MINOR.$PATCH"
           echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
           sed -i "s/version=$CURRENT/version=$NEW_VERSION/" VERSION
+          sed -i "s/\"version\": \"$CURRENT\"/\"version\": \"$NEW_VERSION\"/" src-tauri/tauri.conf.json
 
       - name: Commit version bump
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          git add VERSION
+          git add VERSION src-tauri/tauri.conf.json
           git commit -m "chore: bump version to ${{ steps.version.outputs.new_version }} [skip ci]"
           git tag v${{ steps.version.outputs.new_version }}
 
@@ -79,13 +80,6 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-          - os: macos-latest
-            target: x86_64-apple-darwin
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -95,8 +89,46 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux system dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Install npm dependencies
         run: npm install
 
-      - name: Build
-        run: echo 'build not configured'
+      - name: Generate app icon
+        run: |
+          node -e "
+          const fs = require('fs');
+          const zlib = require('zlib');
+          function crc32(buf) {
+            let c = 0xffffffff;
+            for (let i = 0; i < buf.length; i++) { c ^= buf[i]; for (let j = 0; j < 8; j++) c = c & 1 ? (c >>> 1) ^ 0xedb88320 : c >>> 1; }
+            return (c ^ 0xffffffff) >>> 0;
+          }
+          function chunk(t, d) { const l = Buffer.alloc(4); l.writeUInt32BE(d.length); const tb = Buffer.from(t); const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(Buffer.concat([tb, d]))); return Buffer.concat([l, tb, d, crc]); }
+          const s = Buffer.from([137,80,78,71,13,10,26,10]);
+          const ih = Buffer.alloc(13); ih.writeUInt32BE(1024,0); ih.writeUInt32BE(1024,4); ih[8]=8; ih[9]=2;
+          const r = []; for (let y = 0; y < 1024; y++) { r.push(0); for (let x = 0; x < 1024; x++) r.push(59,130,246); }
+          const id = chunk('IDAT', zlib.deflateSync(Buffer.from(r)));
+          const ie = chunk('IEND', Buffer.alloc(0));
+          fs.writeFileSync('icon.png', Buffer.concat([s, chunk('IHDR', ih), id, ie]));
+          "
+
+      - name: Generate all icon formats
+        run: npx tauri icon icon.png
+
+      - name: Build Tauri app
+        run: npm run tauri build
+
+      - name: Upload release artifacts
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: v${{ needs.release.outputs.new_version }}
+          files: |
+            src-tauri/target/release/bundle/**/*
