@@ -84,6 +84,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.release.outputs.new_version }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

@@ -65,6 +65,8 @@ Prebuilt installers are available on the [Releases page](https://github.com/andr
 | macOS | `.dmg` (Intel & Apple Silicon) |
 | Linux | `.deb` / `.AppImage` |
 
+> **Windows SmartScreen**: The installer is not code-signed. When Windows Defender shows a warning, click **More info** → **Run anyway**.
+
 ### Build from Source
 
 #### Prerequisites
