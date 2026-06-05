@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    branches: [main]
+    branches: [master]
     paths-ignore:
       - '**.md'
       - '.gitignore'
@@ -16,12 +16,12 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.version.outputs.new_version }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-
 
       - name: Determine bump
         id: bump
@@ -54,31 +54,6 @@ jobs:
           echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
           sed -i "s/version=$CURRENT/version=$NEW_VERSION/" VERSION
 
-      - name: Run tests
-        id: tests
-        continue-on-error: true
-        run: echo 'no tests'
-
-      - name: Create issue on test failure
-        if: steps.tests.outcome == 'failure'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: 'Release tests failed',
-              body: 'Tests failed during release for version ${{ steps.version.outputs.new_version }}. Check the release workflow run for details.',
-              labels: ['bug', 'auto-reported']
-            })
-
-      - name: Fail if tests failed
-        if: steps.tests.outcome == 'failure'
-        run: exit 1
-
-      - name: Build artifact
-        run: echo 'no build'
-
       - name: Commit version bump
         run: |
           git config user.name "github-actions"
@@ -94,25 +69,29 @@ jobs:
           generate_release_notes: true
           make_latest: true
 
-  publish:
+  build:
     needs: release
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          fetch-depth: 0
+          node-version: '20'
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
+      - name: Install dependencies
+        run: npm ci || echo 'no package.json'
 
-      - name: Build wheel
-        run: |
-          pip install hatchling
-          python -m hatchling build
-
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Build
+        run: echo 'build not configured'
