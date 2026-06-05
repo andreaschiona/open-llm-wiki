@@ -1,4 +1,19 @@
+use std::fs;
+use std::io::Write;
+use std::path::PathBuf;
 use tauri::Manager;
+
+fn log_file() -> PathBuf {
+    let mut path = std::env::temp_dir();
+    path.push("open-llm-wiki-debug.log");
+    path
+}
+
+fn write_log(msg: &str) {
+    if let Ok(mut f) = fs::OpenOptions::new().create(true).append(true).open(log_file()) {
+        let _ = writeln!(f, "{}", msg);
+    }
+}
 
 #[tauri::command]
 fn get_app_data_dir(app: tauri::AppHandle) -> Result<String, String> {
@@ -39,7 +54,23 @@ fn file_exists(path: String) -> bool {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    std::panic::set_hook(Box::new(|info| {
+        let msg = format!("PANIC: {}", info);
+        write_log(&msg);
+    }));
+
+    write_log("=== App starting ===");
+
+    let result = tauri::Builder::default()
+        .setup(|app| {
+            write_log("Setup started");
+            let data_dir = app.path().app_data_dir().ok();
+            if let Some(d) = &data_dir {
+                write_log(&format!("App data dir: {}", d.to_string_lossy()));
+            }
+            write_log("Setup complete");
+            Ok(())
+        })
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
@@ -51,6 +82,11 @@ pub fn run() {
             create_directory,
             file_exists,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .run(tauri::generate_context!());
+
+    if let Err(e) = result {
+        write_log(&format!("App exited with error: {}", e));
+    } else {
+        write_log("App exited normally");
+    }
 }
