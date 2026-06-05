@@ -756,6 +756,66 @@ html, body, #root {
   color: var(--error);
 }
 
+.version-info {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.version-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.version-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.version-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.version-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.version-status.checking {
+  color: var(--text-muted);
+}
+
+.version-status.available {
+  color: var(--warning);
+  justify-content: space-between;
+}
+
+.version-status.up-to-date {
+  color: var(--success);
+}
+
+.version-status.error {
+  color: var(--error);
+}
+
+.spinner-small {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
 /* Provider Form */
 .provider-form {
   padding: 16px 0;
