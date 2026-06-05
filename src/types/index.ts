@@ -65,6 +65,16 @@ export interface WikiTreeNode {
 
 export type AppView = 'wiki' | 'chat' | 'ingestion' | 'settings'
 
+export type UpdateStatus = 'checking' | 'up-to-date' | 'available' | 'error'
+
+export interface UpdateInfo {
+  currentVersion: string
+  latestVersion: string | null
+  latestUrl: string | null
+  status: UpdateStatus
+  error?: string
+}
+
 export interface WikiIndexEntry {
   title: string
   path: string
