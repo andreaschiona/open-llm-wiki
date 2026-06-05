@@ -14,7 +14,7 @@ DO NOT touch any source code files for analyze or plan commands.
 
 ## Project Overview
 
-This project uses unknown with the manual build system (manual).
+This project uses Node.js with a Tauri (Rust) backend.
 
 ## Verified Commands
 
@@ -44,10 +44,10 @@ When opencode is triggered by a comment:
 
 | Command | Scope | Behaviour |
 |---------|-------|-----------|
-| `/oc fix` | Issue | Apply a quick corrective change. Analyse the issue, create a throwaway fix branch from `main`, apply the fix, commit with `fix:` prefix, and push. Do NOT create a PR. The instruction payload may describe the fix intent. |
+| `/oc fix` | Issue | Apply a quick corrective change. Analyse the issue, create a throwaway fix branch from `master`, apply the fix, commit with `fix:` prefix, and push. Do NOT create a PR. The instruction payload may describe the fix intent. |
 | `/oc analyze` | Issue | Read the issue body and all comments. Perform a critical analysis, then post a detailed functional requirement as a new issue comment. Include: problem statement, affected areas, acceptance criteria, and open questions. The instruction payload may scope the analysis. |
 | `/oc plan` | Issue | (Requires prior analyze comment) Read the analysed functional requirement from the issue. Produce a technical implementation plan with file-level breakdown, and post it as a new issue comment. List each file to create or modify, the approach, and any dependencies. |
-| `/oc implement` | Issue | (Requires prior plan comment) Create a feature branch named `issue-{{number}}` from `main`. Implement the plan file-by-file, committing each logical unit with a conventional commit message. Open a Pull Request targeting `main` that includes `Closes #{{number}}` in the description. |
+| `/oc implement` | Issue | (Requires prior plan comment) Create a feature branch named `issue-{{number}}` from `master`. Implement the plan file-by-file, committing each logical unit with a conventional commit message. Open a Pull Request targeting `master` that includes `Closes #{{number}}` in the description. |
 | `/oc fixCheck` | PR | Read the PR's automated check results (lint errors, test failures). For each failure, apply a fix, amend the PR branch, and re-trigger checks. Repeat up to 3 retries. When done (all passing or retries exhausted), post a status comment on the PR. |
 
 ### CRITICAL RULES -- READ BEFORE ACTING
@@ -87,9 +87,8 @@ Every commit MUST follow the Conventional Commits specification:
 ## Branch Naming
 
 Feature branches MUST follow the pattern: `issue-{{number}}`
-Always branch from `main`.
+Always branch from `master`.
 
 ## Version Configuration
 
 Version is stored in: `VERSION`
-
