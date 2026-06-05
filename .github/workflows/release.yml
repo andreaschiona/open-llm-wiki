@@ -62,6 +62,11 @@ jobs:
           git commit -m "chore: bump version to ${{ steps.version.outputs.new_version }} [skip ci]"
           git tag v${{ steps.version.outputs.new_version }}
 
+      - name: Push version bump
+        run: |
+          git push origin master
+          git push origin v${{ steps.version.outputs.new_version }}
+
       - name: Create Release
         uses: softprops/action-gh-release@v3
         with:
