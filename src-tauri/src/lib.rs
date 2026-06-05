@@ -37,6 +37,11 @@ fn file_exists(path: String) -> bool {
     std::path::Path::new(&path).exists()
 }
 
+#[tauri::command]
+fn get_app_version(app: tauri::AppHandle) -> String {
+    app.config().version.clone()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -50,6 +55,7 @@ pub fn run() {
             list_directory,
             create_directory,
             file_exists,
+            get_app_version,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
