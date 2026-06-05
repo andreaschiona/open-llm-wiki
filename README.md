@@ -53,31 +53,78 @@ Built with [Tauri 2](https://v2.tauri.app/), React, and TypeScript.
 - **Ingestion Pipeline:** Fetches web pages (HTML→Markdown) and PDFs, extracts entities/concepts via LLM, and saves structured wiki pages
 - **LLM Providers:** Abstraction layer supporting OpenAI-compatible APIs, Ollama (local), OpenRouter, and Google Gemini
 
-## Quick Start
+## Installation
 
-### Prerequisites
+### Download
+
+Prebuilt installers are available on the [Releases page](https://github.com/andreaschiona/open-llm-wiki/releases):
+
+| Platform | Format |
+|----------|--------|
+| Windows | `.msi` / `.exe` |
+| macOS | `.dmg` (Intel & Apple Silicon) |
+| Linux | `.deb` / `.AppImage` |
+
+### Build from Source
+
+#### Prerequisites
 
 - [Node.js](https://nodejs.org/) 18+
-- [Rust](https://www.rust-lang.org/) toolchain (for Tauri)
-- Optional: [Ollama](https://ollama.ai/) for local LLM inference
+- [Rust](https://www.rust-lang.org/) toolchain (install via `rustup`)
+- Platform-specific system dependencies:
 
-### Development
+<details>
+<summary>Linux (Debian/Ubuntu)</summary>
 
 ```bash
-# Install dependencies
+sudo apt update
+sudo apt install -y \
+  libwebkit2gtk-4.1-dev \
+  build-essential \
+  curl \
+  wget \
+  file \
+  libxdo-dev \
+  libssl-dev \
+  libayatana-appindicator3-dev \
+  librsvg2-dev
+```
+</details>
+
+<details>
+<summary>macOS</summary>
+
+Xcode Command Line Tools are required:
+```bash
+xcode-select --install
+```
+</details>
+
+<details>
+<summary>Windows</summary>
+
+- [Microsoft Visual Studio C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+- WebView2 (included in Windows 10 1803+)
+</details>
+
+#### Build Commands
+
+```bash
+# Install JavaScript dependencies
 npm install
 
-# Start the development server (Vite + Tauri)
-npm run tauri dev
-```
-
-### Build
-
-```bash
+# Build the desktop application
 npm run tauri build
 ```
 
 The distributable will be placed in `src-tauri/target/release/bundle/`.
+
+### Development
+
+```bash
+npm install
+npm run tauri dev
+```
 
 ## LLM Provider Setup
 
