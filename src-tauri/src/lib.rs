@@ -54,7 +54,7 @@ fn file_exists(path: String) -> bool {
 
 #[tauri::command]
 fn get_app_version(app: tauri::AppHandle) -> String {
-    app.config().version.clone()
+    app.config().version.clone().unwrap_or_default()
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
