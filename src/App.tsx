@@ -14,8 +14,8 @@ import './components/Sidebar.css'
 const fileOps = {
   readFile: async (path: string): Promise<string> => {
     try {
-      const { readTextFile } = await import('@tauri-apps/plugin-fs')
-      return await readTextFile(path)
+      const { readTextFile, BaseDirectory } = await import('@tauri-apps/plugin-fs')
+      return await readTextFile(path, { baseDir: BaseDirectory.AppData })
     } catch {
       try {
         const res = await fetch(`/static/${path}`)
@@ -26,29 +26,33 @@ const fileOps = {
   },
   writeFile: async (path: string, content: string): Promise<void> => {
     try {
-      const { writeTextFile } = await import('@tauri-apps/plugin-fs')
-      await writeTextFile(path, content)
-    } catch {
-      console.warn('File write not available in browser mode')
+      const { writeTextFile, BaseDirectory } = await import('@tauri-apps/plugin-fs')
+      await writeTextFile(path, content, { baseDir: BaseDirectory.AppData })
+    } catch (e) {
+      console.warn('File write error:', e)
     }
   },
   listDir: async (path: string): Promise<string[]> => {
     try {
-      const { readDir } = await import('@tauri-apps/plugin-fs')
-      const entries = await readDir(path)
+      const { readDir, BaseDirectory } = await import('@tauri-apps/plugin-fs')
+      const entries = await readDir(path, { baseDir: BaseDirectory.AppData })
       return entries.map(e => e.name)
     } catch {
       return []
     }
   },
-  createDir: async (_path: string): Promise<void> => {
-    console.warn('Directory creation not available in browser mode')
+  createDir: async (path: string): Promise<void> => {
+    try {
+      const { mkdir, BaseDirectory } = await import('@tauri-apps/plugin-fs')
+      await mkdir(path, { baseDir: BaseDirectory.AppData, recursive: true })
+    } catch {
+      console.warn('Directory creation not available')
+    }
   },
   fileExists: async (path: string): Promise<boolean> => {
     try {
-      const { readTextFile } = await import('@tauri-apps/plugin-fs')
-      await readTextFile(path)
-      return true
+      const { exists, BaseDirectory } = await import('@tauri-apps/plugin-fs')
+      return await exists(path, { baseDir: BaseDirectory.AppData })
     } catch {
       return false
     }
