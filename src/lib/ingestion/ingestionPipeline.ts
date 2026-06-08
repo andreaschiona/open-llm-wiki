@@ -70,7 +70,7 @@ ${summary}
 
       this.emit(taskId, 'entities', 75, 'Extracting entities and concepts...')
 
-      await this.extractEntities(rawContent, safeName, title)
+      const extracted = await this.extractEntities(rawContent, safeName, title)
 
       this.emit(taskId, 'index', 90, 'Updating wiki index...')
 
@@ -85,16 +85,27 @@ ${summary}
         tags: [],
         updated: new Date().toISOString(),
       })
+      for (const ent of extracted) {
+        wikiIndex.addEntry({
+          title: ent.name,
+          path: ent.path,
+          category: ent.category,
+          summary: ent.description.slice(0, 100) + '...',
+          tags: [],
+          updated: new Date().toISOString(),
+        })
+      }
       await this.wikiManager.updateIndex(wikiIndex.toMarkdown())
 
       this.emit(taskId, 'log', 95, 'Updating change log...')
 
+      const pagesAffected: string[] = [summaryPath, ...extracted.map(e => e.path)]
       const logEntry: LogEntry = {
         timestamp: new Date().toISOString(),
         operation: 'ingest',
         source,
-        description: `Ingested "${title}" — summary page created`,
-        pagesAffected: [summaryPath],
+        description: `Ingested "${title}" — created 1 summary and ${extracted.length} entity/concept pages`,
+        pagesAffected,
       }
       await this.wikiManager.appendLog(logEntry)
 
@@ -146,7 +157,8 @@ Document title: ${title}`
     rawContent: string,
     _pageSlug: string,
     title: string,
-  ): Promise<void> {
+  ): Promise<Array<{ name: string; category: string; path: string; description: string }>> {
+    const results: Array<{ name: string; category: string; path: string; description: string }> = []
     const systemPrompt = `You are an entity extractor. Given a document, extract the main entities and concepts mentioned.
 For each entity/concept, provide a brief description (1-2 sentences).
 Format as JSON array: [{"name": "...", "type": "entity|concept", "description": "..."}]`
@@ -192,9 +204,18 @@ ${entity.description}
 `
           await this.wikiManager.writePage(path, content)
         }
+
+        results.push({
+          name: entity.name,
+          category,
+          path,
+          description: entity.description,
+        })
       }
     } catch (err) {
       logger.warn('IngestionPipeline', 'Entity extraction failed', err)
     }
+
+    return results
   }
 }

@@ -9,12 +9,17 @@ interface MarkdownRendererProps {
 export function MarkdownRenderer({ content }: MarkdownRendererProps) {
   const navigateToPage = useWikiStore(s => s.navigateToPage)
 
-  const handleWikiLink = (pageName: string) => {
+  const handleWikiLink = async (pageName: string) => {
     const slug = pageName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    const wm = useWikiStore.getState().wikiManager
     const categories = ['entities', 'concepts', 'summaries', 'queries']
     for (const cat of categories) {
       const path = `${cat}/${slug}.md`
-      navigateToPage(path)
+      const page = await wm?.readPage(path)
+      if (page) {
+        navigateToPage(path)
+        return
+      }
     }
   }
 
@@ -29,6 +34,16 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
             onClick={(e) => { e.preventDefault(); handleWikiLink(pageName) }}
           >
             {pageName}
+          </a>
+        )
+      }
+      if (href && !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('mailto:')) {
+        return (
+          <a
+            href="#"
+            onClick={(e) => { e.preventDefault(); navigateToPage(href) }}
+          >
+            {children}
           </a>
         )
       }
