@@ -243,9 +243,17 @@ Rules:
     const url = source.toLowerCase()
     const filename = source.split('/').pop()?.toLowerCase() || ''
 
+    let hostname = ''
+    try {
+      hostname = new URL(source).hostname.toLowerCase()
+    } catch {
+      hostname = ''
+    }
+    const isGitHubHost = hostname === 'github.com' || hostname.endsWith('.github.com')
+
     if (filename.endsWith('.pdf')) return 'pdfs'
     if (filename.endsWith('.mp3') || filename.endsWith('.wav') || filename.endsWith('.ogg')) return 'audio'
-    if (source.includes('github.com') || filename.endsWith('.py') || filename.endsWith('.js') || filename.endsWith('.rs')) return 'code'
+    if (isGitHubHost || filename.endsWith('.py') || filename.endsWith('.js') || filename.endsWith('.rs')) return 'code'
     if (filename.endsWith('.json') || filename.endsWith('.csv') || filename.endsWith('.sql')) return 'data'
     if (filename.endsWith('.txt') || filename.endsWith('.md')) return 'meetings'
     if (url.includes('chat') || url.includes('slack') || url.includes('discord')) return 'chat'
