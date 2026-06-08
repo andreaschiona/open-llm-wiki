@@ -27,7 +27,12 @@ export class IngestionPipeline {
     this.onProgress = onProgress
   }
 
-  private emit(taskId: string, step: string, progress: number, message: string) {
+  private emit(
+    taskId: string,
+    step: string,
+    progress: number,
+    message: string,
+  ) {
     this.onProgress?.({ taskId, step, progress, message })
   }
 
@@ -44,7 +49,11 @@ export class IngestionPipeline {
 
       this.emit(taskId, 'saving', 60, 'Saving summary page...')
 
-      const safeName = title.replace(/[^a-zA-Z0-9_\-\s]/g, '').trim().replace(/\s+/g, '-').toLowerCase()
+      const safeName = title
+        .replace(/[^a-zA-Z0-9_\-\s]/g, '')
+        .trim()
+        .replace(/\s+/g, '-')
+        .toLowerCase()
       const summaryPath = `summaries/${safeName}.md`
       const summaryContent = `# ${title}
 
@@ -93,7 +102,10 @@ ${summary}
       logger.info('IngestionPipeline', `Processed: ${title}`)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
-      logger.error('IngestionPipeline', `Failed to process "${title}"`, { source, error: message })
+      logger.error('IngestionPipeline', `Failed to process "${title}"`, {
+        source,
+        error: message,
+      })
       this.emit(taskId, 'error', 0, `Error: ${message}`)
       reportError(err instanceof Error ? err : new Error(message), {
         module: 'IngestionPipeline',
@@ -106,7 +118,10 @@ ${summary}
     }
   }
 
-  private async generateSummary(rawContent: string, title: string): Promise<string> {
+  private async generateSummary(
+    rawContent: string,
+    title: string,
+  ): Promise<string> {
     const systemPrompt = `You are a Wiki summarizer. Given a document, create a detailed markdown summary that:
 1. Captures the key points and main ideas
 2. Uses bullet points for clarity
@@ -127,7 +142,11 @@ Document title: ${title}`
     return response.content
   }
 
-  private async extractEntities(rawContent: string, _pageSlug: string, title: string): Promise<void> {
+  private async extractEntities(
+    rawContent: string,
+    _pageSlug: string,
+    title: string,
+  ): Promise<void> {
     const systemPrompt = `You are an entity extractor. Given a document, extract the main entities and concepts mentioned.
 For each entity/concept, provide a brief description (1-2 sentences).
 Format as JSON array: [{"name": "...", "type": "entity|concept", "description": "..."}]`
@@ -142,11 +161,21 @@ Format as JSON array: [{"name": "...", "type": "entity|concept", "description": 
         temperature: 0.3,
       })
 
-      const json = response.content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
-      const entities = JSON.parse(json) as Array<{ name: string; type: string; description: string }>
+      const json = response.content
+        .replace(/```json\n?/g, '')
+        .replace(/```\n?/g, '')
+        .trim()
+      const entities = JSON.parse(json) as Array<{
+        name: string
+        type: string
+        description: string
+      }>
 
       for (const entity of entities) {
-        const slug = entity.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+        const slug = entity.name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '')
         const category = entity.type === 'entity' ? 'entities' : 'concepts'
         const path = `${category}/${slug}.md`
         const existing = await this.wikiManager.readPage(path)

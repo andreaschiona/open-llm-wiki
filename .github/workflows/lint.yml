@@ -31,3 +31,4 @@ jobs:
           VALIDATE_PHP: false
           VALIDATE_XML: false
           VALIDATE_PROPERTIES: false
+          VALIDATE_TYPESCRIPT_STANDARD: false

@@ -10,7 +10,11 @@ export class OpenAIProvider implements LLMProvider {
   private apiKey: string
   private defaultModel: string
 
-  constructor(config: { baseUrl: string; apiKey: string; defaultModel: string }) {
+  constructor(config: {
+    baseUrl: string
+    apiKey: string
+    defaultModel: string
+  }) {
     this.baseUrl = config.baseUrl.replace(/\/+$/, '')
     this.apiKey = config.apiKey
     this.defaultModel = config.defaultModel || 'gpt-4o-mini'
@@ -47,7 +51,9 @@ export class OpenAIProvider implements LLMProvider {
     const data = await res.json()
     if (!data.choices?.[0]?.message?.content) {
       const snippet = JSON.stringify(data).slice(0, 200)
-      throw new Error(`OpenAI API returned unexpected response — missing choices[0].message.content: ${snippet}`)
+      throw new Error(
+        `OpenAI API returned unexpected response — missing choices[0].message.content: ${snippet}`,
+      )
     }
     return {
       content: data.choices[0].message.content,
@@ -64,7 +70,7 @@ export class OpenAIProvider implements LLMProvider {
 
   async streamChat(
     request: ChatRequest,
-    onChunk: (chunk: string) => void
+    onChunk: (chunk: string) => void,
   ): Promise<ChatResponse> {
     const body = {
       model: request.model || this.defaultModel,
@@ -132,7 +138,9 @@ export class OpenAIProvider implements LLMProvider {
         provider: this.id,
       }))
     } catch {
-      return [{ id: this.defaultModel, name: this.defaultModel, provider: this.id }]
+      return [
+        { id: this.defaultModel, name: this.defaultModel, provider: this.id },
+      ]
     }
   }
 

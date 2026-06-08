@@ -12,7 +12,10 @@ interface ConfigState {
   githubToken: string
   init: (fileOps: any) => Promise<void>
   addProvider: (provider: LLMProviderConfig) => Promise<void>
-  updateProvider: (id: string, updates: Partial<LLMProviderConfig>) => Promise<void>
+  updateProvider: (
+    id: string,
+    updates: Partial<LLMProviderConfig>,
+  ) => Promise<void>
   removeProvider: (id: string) => Promise<void>
   setActiveProvider: (id: string) => Promise<void>
   getActiveProvider: () => LLMProviderConfig | undefined
@@ -34,7 +37,9 @@ function saveGitHubToken(token: string): void {
     } else {
       localStorage.removeItem(GITHUB_TOKEN_KEY)
     }
-  } catch { /* localStorage not available */ }
+  } catch {
+    /* localStorage not available */
+  }
 }
 
 export const useConfigStore = create<ConfigState>((set, get) => ({
@@ -91,7 +96,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
 
   getActiveProvider: () => {
     const { providers, activeProviderId } = get()
-    return providers.find(p => p.id === activeProviderId)
+    return providers.find((p) => p.id === activeProviderId)
   },
 
   setGitHubToken: (token: string) => {
