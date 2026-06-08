@@ -24,16 +24,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_JAVA: false
           VALIDATE_KOTLIN: false
-          VALIDATE_JAVASCRIPT_ES: true
-          VALIDATE_TYPESCRIPT_ES: true
           VALIDATE_PYTHON: false
           VALIDATE_GO: false
           VALIDATE_RUST: false
           VALIDATE_RUBY: false
           VALIDATE_PHP: false
-          VALIDATE_YAML: true
-          VALIDATE_JSON: true
           VALIDATE_XML: false
-          VALIDATE_MARKDOWN: true
-          VALIDATE_GITHUB_ACTIONS: true
           VALIDATE_PROPERTIES: false
