@@ -1,5 +1,6 @@
 import type { LLMProvider, ChatRequest, ChatResponse } from './provider'
 import type { LLMModel } from '../../types'
+import { getReader, readStream } from './streamReader'
 
 export class OpenAIProvider implements LLMProvider {
   readonly id: string = 'openai'
@@ -85,38 +86,25 @@ export class OpenAIProvider implements LLMProvider {
       throw new Error(`OpenAI API error ${res.status}: ${err}`)
     }
 
-    const reader = res.body?.getReader()
-    if (!reader) throw new Error('No response body')
-
+    const reader = getReader(res)
     let fullContent = ''
-    const decoder = new TextDecoder()
-    let buffer = ''
 
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-
-      buffer += decoder.decode(value, { stream: true })
-      const lines = buffer.split('\n')
-      buffer = lines.pop() || ''
-
-      for (const line of lines) {
-        const trimmed = line.trim()
-        if (!trimmed || !trimmed.startsWith('data: ')) continue
-        const data = trimmed.slice(6)
-        if (data === '[DONE]') continue
-        try {
-          const parsed = JSON.parse(data)
-          const delta = parsed.choices?.[0]?.delta?.content
-          if (delta) {
-            fullContent += delta
-            onChunk(delta)
-          }
-        } catch {
-          // skip parse errors
+    await readStream(reader, (line: string) => {
+      const trimmed = line.trim()
+      if (!trimmed || !trimmed.startsWith('data: ')) return
+      const data = trimmed.slice(6)
+      if (data === '[DONE]') return
+      try {
+        const parsed = JSON.parse(data)
+        const delta = parsed.choices?.[0]?.delta?.content
+        if (delta) {
+          fullContent += delta
+          onChunk(delta)
         }
+      } catch {
+        // skip parse errors
       }
-    }
+    })
 
     return {
       content: fullContent,

@@ -80,7 +80,7 @@ pub fn run() {
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &quit])?;
 
-            TrayIconBuilder::new("main-tray")
+            TrayIconBuilder::with_id("main-tray")
                 .icon(app.default_window_icon().unwrap().clone())
                 .tooltip("Open LLM Wiki")
                 .menu(&menu)
@@ -105,11 +105,10 @@ pub fn run() {
                         ..
                     } = event
                     {
-                        if let Some(app) = tray.app_handle() {
-                            if let Some(window) = app.get_webview_window("main") {
-                                let _ = window.show();
-                                let _ = window.set_focus();
-                            }
+                        let app = tray.app_handle();
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
                         }
                     }
                 })
