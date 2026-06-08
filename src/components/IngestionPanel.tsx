@@ -6,6 +6,7 @@ import { UrlIngestor } from '../lib/ingestion/urlIngestor'
 import { PdfIngestor } from '../lib/ingestion/pdfIngestor'
 import { IngestionPipeline } from '../lib/ingestion/ingestionPipeline'
 import { createProvider } from '../lib/llm/providerFactory'
+import { reportError } from '../lib/utils/errorReporter'
 import type { IngestionTask } from '../types'
 
 export function IngestionPanel() {
@@ -59,9 +60,12 @@ export function IngestionPanel() {
       useWikiStore.getState().refreshIndex()
       useWikiStore.getState().refreshTree()
     } catch (err) {
-      updateIngestionTask(task.id, {
-        status: 'error',
-        error: err instanceof Error ? err.message : 'Unknown error',
+      const msg = err instanceof Error ? err.message : 'Unknown error'
+      updateIngestionTask(task.id, { status: 'error', error: msg })
+      reportError(err instanceof Error ? err : new Error(msg), {
+        context: 'handleUrlIngest',
+        source: urlInput,
+        taskId: task.id,
       })
     }
   }
@@ -97,9 +101,12 @@ export function IngestionPanel() {
       useWikiStore.getState().refreshIndex()
       useWikiStore.getState().refreshTree()
     } catch (err) {
-      updateIngestionTask(task.id, {
-        status: 'error',
-        error: err instanceof Error ? err.message : 'Unknown error',
+      const msg = err instanceof Error ? err.message : 'Unknown error'
+      updateIngestionTask(task.id, { status: 'error', error: msg })
+      reportError(err instanceof Error ? err : new Error(msg), {
+        context: 'handleFileIngest',
+        source: fileInput?.name || 'unknown',
+        taskId: task.id,
       })
     }
   }

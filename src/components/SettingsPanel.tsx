@@ -15,11 +15,16 @@ export function SettingsPanel() {
   const {
     providers,
     initialized,
+    githubToken,
     addProvider,
     updateProvider,
     removeProvider,
     setActiveProvider,
+    setGitHubToken,
   } = useConfigStore()
+
+  const [tokenDraft, setTokenDraft] = useState(githubToken)
+  const [tokenSaved, setTokenSaved] = useState(false)
 
   const updateInfo = useUpdateStore(s => s.updateInfo)
   const checkForUpdates = useUpdateStore(s => s.checkForUpdates)
@@ -82,6 +87,12 @@ export function SettingsPanel() {
     }
   }
 
+  const handleSaveToken = () => {
+    setGitHubToken(tokenDraft)
+    setTokenSaved(true)
+    setTimeout(() => setTokenSaved(false), 2000)
+  }
+
   if (!initialized) {
     return <div className="settings-panel">Loading...</div>
   }
@@ -140,6 +151,32 @@ export function SettingsPanel() {
             <div className="version-status error">
               <span>Check failed: {updateInfo.error}</span>
             </div>
+          )}
+        </div>
+      </section>
+
+      <section className="settings-section">
+        <div className="settings-section-header">
+          <h3>Error Reporting</h3>
+        </div>
+        <div className="github-token-form">
+          <p className="settings-description">
+            Set a GitHub Personal Access Token to automatically create issues when errors occur.
+          </p>
+          <div className="token-input-row">
+            <input
+              type="password"
+              className="input-field"
+              value={tokenDraft}
+              onChange={e => setTokenDraft(e.target.value)}
+              placeholder="ghp_..."
+            />
+            <button className="btn" onClick={handleSaveToken}>
+              {tokenSaved ? 'Saved!' : 'Save Token'}
+            </button>
+          </div>
+          {githubToken && (
+            <p className="token-status ok">Token configured</p>
           )}
         </div>
       </section>

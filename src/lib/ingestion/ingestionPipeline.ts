@@ -2,6 +2,7 @@ import type { LLMProvider } from '../llm/provider'
 import { WikiManager } from '../wiki/wikiManager'
 import { WikiIndex } from '../wiki/wikiIndex'
 import { logger } from '../utils/logger'
+import { reportError } from '../utils/errorReporter'
 import type { LogEntry } from '../../types'
 
 export interface PipelineProgress {
@@ -26,7 +27,12 @@ export class IngestionPipeline {
     this.onProgress = onProgress
   }
 
-  private emit(taskId: string, step: string, progress: number, message: string) {
+  private emit(
+    taskId: string,
+    step: string,
+    progress: number,
+    message: string,
+  ) {
     this.onProgress?.({ taskId, step, progress, message })
   }
 
@@ -36,15 +42,20 @@ export class IngestionPipeline {
     rawContent: string,
     source: string,
   ): Promise<void> {
-    this.emit(taskId, 'analyzing', 30, 'Analyzing content with LLM...')
+    try {
+      this.emit(taskId, 'analyzing', 30, 'Analyzing content with LLM...')
 
-    const summary = await this.generateSummary(rawContent, title)
+      const summary = await this.generateSummary(rawContent, title)
 
-    this.emit(taskId, 'saving', 60, 'Saving summary page...')
+      this.emit(taskId, 'saving', 60, 'Saving summary page...')
 
-    const safeName = title.replace(/[^a-zA-Z0-9_\-\s]/g, '').trim().replace(/\s+/g, '-').toLowerCase()
-    const summaryPath = `summaries/${safeName}.md`
-    const summaryContent = `# ${title}
+      const safeName = title
+        .replace(/[^a-zA-Z0-9_\-\s]/g, '')
+        .trim()
+        .replace(/\s+/g, '-')
+        .toLowerCase()
+      const summaryPath = `summaries/${safeName}.md`
+      const summaryContent = `# ${title}
 
 > Summarized from: ${source}
 
@@ -55,43 +66,62 @@ ${summary}
 *Source: ${source}*  
 *Imported: ${new Date().toISOString()}*
 `
-    await this.wikiManager.writePage(summaryPath, summaryContent)
+      await this.wikiManager.writePage(summaryPath, summaryContent)
 
-    this.emit(taskId, 'entities', 75, 'Extracting entities and concepts...')
+      this.emit(taskId, 'entities', 75, 'Extracting entities and concepts...')
 
-    await this.extractEntities(rawContent, safeName, title)
+      await this.extractEntities(rawContent, safeName, title)
 
-    this.emit(taskId, 'index', 90, 'Updating wiki index...')
+      this.emit(taskId, 'index', 90, 'Updating wiki index...')
 
-    const indexContent = await this.wikiManager.getIndex()
-    const wikiIndex = new WikiIndex()
-    wikiIndex.fromMarkdown(indexContent)
-    wikiIndex.addEntry({
-      title,
-      path: summaryPath,
-      category: 'summaries',
-      summary: summary.slice(0, 100) + '...',
-      tags: [],
-      updated: new Date().toISOString(),
-    })
-    await this.wikiManager.updateIndex(wikiIndex.toMarkdown())
+      const indexContent = await this.wikiManager.getIndex()
+      const wikiIndex = new WikiIndex()
+      wikiIndex.fromMarkdown(indexContent)
+      wikiIndex.addEntry({
+        title,
+        path: summaryPath,
+        category: 'summaries',
+        summary: summary.slice(0, 100) + '...',
+        tags: [],
+        updated: new Date().toISOString(),
+      })
+      await this.wikiManager.updateIndex(wikiIndex.toMarkdown())
 
-    this.emit(taskId, 'log', 95, 'Updating change log...')
+      this.emit(taskId, 'log', 95, 'Updating change log...')
 
-    const logEntry: LogEntry = {
-      timestamp: new Date().toISOString(),
-      operation: 'ingest',
-      source,
-      description: `Ingested "${title}" — summary page created`,
-      pagesAffected: [summaryPath],
+      const logEntry: LogEntry = {
+        timestamp: new Date().toISOString(),
+        operation: 'ingest',
+        source,
+        description: `Ingested "${title}" — summary page created`,
+        pagesAffected: [summaryPath],
+      }
+      await this.wikiManager.appendLog(logEntry)
+
+      this.emit(taskId, 'done', 100, 'Ingestion complete!')
+      logger.info('IngestionPipeline', `Processed: ${title}`)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      logger.error('IngestionPipeline', `Failed to process "${title}"`, {
+        source,
+        error: message,
+      })
+      this.emit(taskId, 'error', 0, `Error: ${message}`)
+      reportError(err instanceof Error ? err : new Error(message), {
+        module: 'IngestionPipeline',
+        method: 'processRawSource',
+        taskId,
+        title,
+        source,
+      })
+      throw err
     }
-    await this.wikiManager.appendLog(logEntry)
-
-    this.emit(taskId, 'done', 100, 'Ingestion complete!')
-    logger.info('IngestionPipeline', `Processed: ${title}`)
   }
 
-  private async generateSummary(rawContent: string, title: string): Promise<string> {
+  private async generateSummary(
+    rawContent: string,
+    title: string,
+  ): Promise<string> {
     const systemPrompt = `You are a Wiki summarizer. Given a document, create a detailed markdown summary that:
 1. Captures the key points and main ideas
 2. Uses bullet points for clarity
@@ -112,7 +142,11 @@ Document title: ${title}`
     return response.content
   }
 
-  private async extractEntities(rawContent: string, _pageSlug: string, title: string): Promise<void> {
+  private async extractEntities(
+    rawContent: string,
+    _pageSlug: string,
+    title: string,
+  ): Promise<void> {
     const systemPrompt = `You are an entity extractor. Given a document, extract the main entities and concepts mentioned.
 For each entity/concept, provide a brief description (1-2 sentences).
 Format as JSON array: [{"name": "...", "type": "entity|concept", "description": "..."}]`
@@ -127,11 +161,21 @@ Format as JSON array: [{"name": "...", "type": "entity|concept", "description": 
         temperature: 0.3,
       })
 
-      const json = response.content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
-      const entities = JSON.parse(json) as Array<{ name: string; type: string; description: string }>
+      const json = response.content
+        .replace(/```json\n?/g, '')
+        .replace(/```\n?/g, '')
+        .trim()
+      const entities = JSON.parse(json) as Array<{
+        name: string
+        type: string
+        description: string
+      }>
 
       for (const entity of entities) {
-        const slug = entity.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+        const slug = entity.name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '')
         const category = entity.type === 'entity' ? 'entities' : 'concepts'
         const path = `${category}/${slug}.md`
         const existing = await this.wikiManager.readPage(path)

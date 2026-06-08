@@ -2,17 +2,44 @@ import { create } from 'zustand'
 import type { LLMProviderConfig } from '../types'
 import { ConfigManager } from '../lib/config/configManager'
 
+const GITHUB_TOKEN_KEY = 'open-llm-wiki:github_token'
+
 interface ConfigState {
   configManager: ConfigManager | null
   providers: LLMProviderConfig[]
   activeProviderId: string | null
   initialized: boolean
+  githubToken: string
   init: (fileOps: any) => Promise<void>
   addProvider: (provider: LLMProviderConfig) => Promise<void>
-  updateProvider: (id: string, updates: Partial<LLMProviderConfig>) => Promise<void>
+  updateProvider: (
+    id: string,
+    updates: Partial<LLMProviderConfig>,
+  ) => Promise<void>
   removeProvider: (id: string) => Promise<void>
   setActiveProvider: (id: string) => Promise<void>
   getActiveProvider: () => LLMProviderConfig | undefined
+  setGitHubToken: (token: string) => void
+}
+
+function loadGitHubToken(): string {
+  try {
+    return localStorage.getItem(GITHUB_TOKEN_KEY) || ''
+  } catch {
+    return ''
+  }
+}
+
+function saveGitHubToken(token: string): void {
+  try {
+    if (token) {
+      localStorage.setItem(GITHUB_TOKEN_KEY, token)
+    } else {
+      localStorage.removeItem(GITHUB_TOKEN_KEY)
+    }
+  } catch {
+    /* localStorage not available */
+  }
 }
 
 export const useConfigStore = create<ConfigState>((set, get) => ({
@@ -20,6 +47,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   providers: [],
   activeProviderId: null,
   initialized: false,
+  githubToken: loadGitHubToken(),
 
   init: async (fileOps) => {
     const cm = new ConfigManager(fileOps)
@@ -68,6 +96,11 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
 
   getActiveProvider: () => {
     const { providers, activeProviderId } = get()
-    return providers.find(p => p.id === activeProviderId)
+    return providers.find((p) => p.id === activeProviderId)
+  },
+
+  setGitHubToken: (token: string) => {
+    saveGitHubToken(token)
+    set({ githubToken: token })
   },
 }))
