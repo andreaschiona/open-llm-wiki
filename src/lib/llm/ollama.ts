@@ -1,5 +1,6 @@
 import type { LLMProvider, ChatRequest, ChatResponse } from './provider'
 import type { LLMModel } from '../../types'
+import { getReader, readStream } from './streamReader'
 
 export class OllamaProvider implements LLMProvider {
   readonly id = 'ollama'
@@ -67,36 +68,23 @@ export class OllamaProvider implements LLMProvider {
       throw new Error(`Ollama API error ${res.status}: ${err}`)
     }
 
-    const reader = res.body?.getReader()
-    if (!reader) throw new Error('No response body')
-
+    const reader = getReader(res)
     let fullContent = ''
-    const decoder = new TextDecoder()
-    let buffer = ''
 
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-
-      buffer += decoder.decode(value, { stream: true })
-      const lines = buffer.split('\n')
-      buffer = lines.pop() || ''
-
-      for (const line of lines) {
-        if (!line.trim()) continue
-        try {
-          const parsed = JSON.parse(line)
-          const delta = parsed.message?.content
-          if (delta) {
-            fullContent += delta
-            onChunk(delta)
-          }
-          if (parsed.done) break
-        } catch {
-          // skip parse errors
+    await readStream(reader, (line: string) => {
+      if (!line.trim()) return
+      try {
+        const parsed = JSON.parse(line)
+        const delta = parsed.message?.content
+        if (delta) {
+          fullContent += delta
+          onChunk(delta)
         }
+        if (parsed.done) return false
+      } catch {
+        // skip parse errors
       }
-    }
+    })
 
     return {
       content: fullContent,
