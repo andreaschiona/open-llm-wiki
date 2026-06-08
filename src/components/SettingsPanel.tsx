@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useConfigStore } from '../store/useConfigStore'
 import { useUpdateStore } from '../store/useUpdateStore'
+import { useWikiStore } from '../store/useWikiStore'
 import { createProvider } from '../lib/llm/providerFactory'
-import type { LLMProviderConfig } from '../types'
+import { WikiLint } from '../lib/wiki/wikiLint'
+import type { LLMProviderConfig, LintResult } from '../types'
 
 const PROVIDER_TYPES = [
   { value: 'openai', label: 'OpenAI Compatible' },
@@ -23,6 +25,8 @@ export function SettingsPanel() {
     setGitHubToken,
   } = useConfigStore()
 
+  const { wikiManager, refreshTree, refreshIndex } = useWikiStore()
+
   const [tokenDraft, setTokenDraft] = useState(githubToken)
   const [tokenSaved, setTokenSaved] = useState(false)
 
@@ -33,6 +37,13 @@ export function SettingsPanel() {
   const [showNew, setShowNew] = useState(false)
   const [testingId, setTestingId] = useState<string | null>(null)
   const [testResult, setTestResult] = useState<{ id: string; ok: boolean; msg: string } | null>(null)
+
+  const [cleaning, setCleaning] = useState(false)
+  const [cleanResult, setCleanResult] = useState<string | null>(null)
+
+  const [linting, setLinting] = useState(false)
+  const [lintResult, setLintResult] = useState<LintResult | null>(null)
+  const [lintProgress, setLintProgress] = useState('')
 
   const defaultNewProvider: LLMProviderConfig = {
     id: '',
@@ -93,6 +104,46 @@ export function SettingsPanel() {
     setTimeout(() => setTokenSaved(false), 2000)
   }
 
+  const handleCleanWiki = async () => {
+    if (!wikiManager) return
+    const confirmed = window.confirm(
+      'This will delete all wiki pages, raw sources, and query files. Are you sure?',
+    )
+    if (!confirmed) return
+
+    setCleaning(true)
+    setCleanResult(null)
+    try {
+      await wikiManager.clearAll()
+      await refreshTree()
+      await refreshIndex()
+      setCleanResult('All wiki pages, raw sources, and queries have been cleaned.')
+    } catch (err) {
+      setCleanResult(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    } finally {
+      setCleaning(false)
+    }
+  }
+
+  const handleLint = async () => {
+    if (!wikiManager) return
+    setLinting(true)
+    setLintResult(null)
+    setLintProgress('Starting lint...')
+    try {
+      const linter = new WikiLint(wikiManager, (step, current, total) => {
+        setLintProgress(`${step}: ${current}/${total}`)
+      })
+      const result = await linter.runLint()
+      setLintResult(result)
+      setLintProgress(result.passed ? 'All checks passed!' : `${result.issues.length} issues found`)
+    } catch (err) {
+      setLintProgress(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    } finally {
+      setLinting(false)
+    }
+  }
+
   if (!initialized) {
     return <div className="settings-panel">Loading...</div>
   }
@@ -100,6 +151,79 @@ export function SettingsPanel() {
   return (
     <div className="settings-panel">
       <h2>Settings</h2>
+
+      <section className="settings-section">
+        <div className="settings-section-header">
+          <h3>Wiki Maintenance</h3>
+        </div>
+        <div className="maintenance-actions">
+          <div className="maintenance-row">
+            <div className="maintenance-info">
+              <strong>Clean Pages and Sources</strong>
+              <p className="settings-description">
+                Delete all wiki pages, raw source files, and query records to start fresh.
+              </p>
+            </div>
+            <button
+              className="btn btn-danger"
+              onClick={handleCleanWiki}
+              disabled={cleaning || !wikiManager}
+            >
+              {cleaning ? 'Cleaning...' : 'Clean Wiki'}
+            </button>
+          </div>
+          {cleanResult && (
+            <div className={`maintenance-result ${cleanResult.startsWith('Error') ? 'error' : 'success'}`}>
+              {cleanResult}
+            </div>
+          )}
+
+          <div className="maintenance-row">
+            <div className="maintenance-info">
+              <strong>Run Lint</strong>
+              <p className="settings-description">
+                Check wiki for broken links, duplicate pages, contradictions, and schema violations.
+              </p>
+            </div>
+            <button
+              className="btn"
+              onClick={handleLint}
+              disabled={linting || !wikiManager}
+            >
+              {linting ? 'Running...' : 'Run Lint'}
+            </button>
+          </div>
+          {lintProgress && (
+            <div className="maintenance-result">
+              {lintProgress}
+            </div>
+          )}
+          {lintResult && (
+            <div className={`lint-report ${lintResult.passed ? 'success' : 'warning'}`}>
+              <div className="lint-summary">
+                <span className={`lint-badge ${lintResult.passed ? 'pass' : 'fail'}`}>
+                  {lintResult.passed ? 'PASSED' : 'ISSUES FOUND'}
+                </span>
+                <span className="lint-stats">
+                  {lintResult.stats.totalFiles} files | {lintResult.stats.brokenLinks} broken links | {lintResult.stats.duplicates} duplicates | {lintResult.stats.contradictions} contradictions | {lintResult.stats.schemaViolations} schema violations
+                </span>
+              </div>
+              {lintResult.issues.length > 0 && (
+                <div className="lint-issues">
+                  {lintResult.issues.map((issue, i) => (
+                    <div key={i} className={`lint-issue lint-${issue.severity}`}>
+                      <span className="lint-issue-type">{issue.type}</span>
+                      <span className="lint-issue-severity">{issue.severity}</span>
+                      <span className="lint-issue-file">{issue.file}</span>
+                      <span className="lint-issue-msg">{issue.message}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
 
       <section className="settings-section">
         <div className="settings-section-header">

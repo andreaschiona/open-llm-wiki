@@ -54,7 +54,21 @@ export const useWikiStore = create<WikiState>((set, get) => ({
     const wm = get().wikiManager
     if (!wm) return
     const page = await wm.readPage(path)
-    set({ currentPage: page, currentPath: path })
+    if (page) {
+      set({ currentPage: page, currentPath: path })
+      return
+    }
+    try {
+      const content = await wm.readFile(path)
+      const title = path.split('/').pop()?.replace(/\.[^.]+$/, '') || path
+      const rawPage: WikiPage = {
+        meta: { title, path, category: 'page', created: '', updated: '', tags: [] },
+        content: `# ${title}\n\n\`\`\`\n${content.slice(0, 10000)}\n\`\`\``,
+      }
+      set({ currentPage: rawPage, currentPath: path })
+    } catch {
+      set({ currentPage: null, currentPath: path })
+    }
   },
 
   refreshTree: async () => {

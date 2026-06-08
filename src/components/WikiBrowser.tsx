@@ -16,7 +16,7 @@ export function WikiBrowser() {
   } = useWikiStore()
 
   const [view, setView] = useState<'tree' | 'index' | 'log'>('index')
-  const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set(['entities', 'concepts', 'summaries', 'queries']))
+  const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set(['wiki']))
 
   useEffect(() => {
     if (initialized) {
@@ -56,13 +56,37 @@ export function WikiBrowser() {
                     <span>{node.name}</span>
                   </div>
                   {expandedDirs.has(node.name) && node.children?.map(child => (
-                    <div
-                      key={child.path}
-                      className={`tree-file ${currentPath === child.path ? 'active' : ''}`}
-                      onClick={() => navigateToPage(child.path)}
-                    >
-                      <span className="tree-file-icon">📄</span>
-                      <span>{child.name.replace('.md', '')}</span>
+                    <div key={child.path}>
+                      {child.type === 'directory' ? (
+                        <>
+                          <div
+                            className="tree-directory tree-subdir"
+                            onClick={() => toggleDir(child.path)}
+                          >
+                            <span className={`tree-arrow ${expandedDirs.has(child.path) ? 'expanded' : ''}`}>▶</span>
+                            <span className="tree-folder">📁</span>
+                            <span>{child.name}</span>
+                          </div>
+                          {expandedDirs.has(child.path) && child.children?.map(subchild => (
+                            <div
+                              key={subchild.path}
+                              className={`tree-file ${currentPath === subchild.path ? 'active' : ''}`}
+                              onClick={() => navigateToPage(subchild.path)}
+                            >
+                              <span className="tree-file-icon">📄</span>
+                              <span>{subchild.name.replace('.md', '')}</span>
+                            </div>
+                          ))}
+                        </>
+                      ) : (
+                        <div
+                          className={`tree-file ${currentPath === child.path ? 'active' : ''}`}
+                          onClick={() => navigateToPage(child.path)}
+                        >
+                          <span className="tree-file-icon">📄</span>
+                          <span>{child.name.replace('.md', '')}</span>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

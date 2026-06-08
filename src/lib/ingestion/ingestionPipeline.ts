@@ -12,6 +12,13 @@ export interface PipelineProgress {
   message: string
 }
 
+export interface ExtractedEntity {
+  name: string
+  category: string
+  path: string
+  description: string
+}
+
 export class IngestionPipeline {
   private wikiManager: WikiManager
   private llmProvider: LLMProvider
@@ -43,54 +50,106 @@ export class IngestionPipeline {
     source: string,
   ): Promise<void> {
     try {
-      this.emit(taskId, 'analyzing', 30, 'Analyzing content with LLM...')
+      this.emit(taskId, 'saving-raw', 10, 'Saving raw source...')
 
-      const summary = await this.generateSummary(rawContent, title)
+      const rawCategory = this.detectRawCategory(source)
+      const rawFilename = this.sanitizeFilename(title) + this.getExtension(source)
+      await this.wikiManager.writeRawFile(rawCategory, rawFilename, rawContent)
 
-      this.emit(taskId, 'saving', 60, 'Saving summary page...')
+      this.emit(taskId, 'reading', 20, 'Reading full document...')
 
-      const safeName = title
-        .replace(/[^a-zA-Z0-9_\-\s]/g, '')
-        .trim()
-        .replace(/\s+/g, '-')
-        .toLowerCase()
-      const summaryPath = `summaries/${safeName}.md`
-      const summaryContent = `# ${title}
+      this.emit(taskId, 'analyzing', 35, 'Analyzing content with LLM...')
 
-> Summarized from: ${source}
+      const analysis = await this.analyzeDocument(rawContent, title)
 
-${summary}
+      this.emit(taskId, 'reconciling', 50, 'Reconciling with existing wiki...')
+
+      const existingPages = await this.wikiManager.listAllWikiFiles()
+      const existingTitles = new Set<string>()
+      for (const p of existingPages) {
+        const page = await this.wikiManager.readPage(p)
+        if (page) existingTitles.add(page.meta.title.toLowerCase())
+      }
+
+      const newConcepts: { name: string; description: string }[] = []
+      for (const concept of analysis.concepts) {
+        if (!existingTitles.has(concept.name.toLowerCase())) {
+          newConcepts.push(concept)
+        } else {
+          this.emit(taskId, 'reconciling', 55, `Skipping existing concept: ${concept.name}`)
+        }
+      }
+
+      this.emit(taskId, 'writing', 60, 'Writing wiki pages...')
+
+      const safeName = this.sanitizeFilename(title)
+      const pagePath = `pages/${safeName}.md`
+      const pageContent = `# ${title}
+
+> Source: \`raw/${rawCategory}/${rawFilename}\`
+
+${analysis.summary}
+
+## Concepts
+
+${newConcepts.length > 0
+    ? newConcepts.map(c => `- [[${c.name}]] — ${c.description}`).join('\n')
+    : '*No new concepts extracted*'}
+
+## Related Pages
+
+${analysis.relatedPages.length > 0
+    ? analysis.relatedPages.map((r: string) => `- [[${r}]]`).join('\n')
+    : '*None yet*'}
 
 ---
 
-*Source: ${source}*  
+*Source: ${source}*
 *Imported: ${new Date().toISOString()}*
 `
-      await this.wikiManager.writePage(summaryPath, summaryContent)
+      await this.wikiManager.writePage(pagePath, pageContent)
 
-      this.emit(taskId, 'entities', 75, 'Extracting entities and concepts...')
+      const createdPaths = [pagePath]
+      for (const concept of newConcepts) {
+        const slug = this.sanitizeFilename(concept.name)
+        const conceptPath = `pages/${slug}.md`
+        const existingConcept = await this.wikiManager.readPage(conceptPath)
+        if (!existingConcept) {
+          const conceptContent = `# ${concept.name}
 
-      const extracted = await this.extractEntities(rawContent, safeName, title)
+${concept.description}
 
-      this.emit(taskId, 'index', 90, 'Updating wiki index...')
+---
+
+*Extracted from: [[${title}]]*
+*Created: ${new Date().toISOString()}*
+`
+          await this.wikiManager.writePage(conceptPath, conceptContent)
+          createdPaths.push(conceptPath)
+        }
+      }
+
+      this.emit(taskId, 'index', 85, 'Updating wiki index...')
 
       const indexContent = await this.wikiManager.getIndex()
       const wikiIndex = new WikiIndex()
       wikiIndex.fromMarkdown(indexContent)
+
       wikiIndex.addEntry({
         title,
-        path: summaryPath,
-        category: 'summaries',
-        summary: summary.slice(0, 100) + '...',
-        tags: [],
+        path: pagePath,
+        category: 'pages',
+        summary: analysis.summary.slice(0, 100) + '...',
+        tags: analysis.tags || [],
         updated: new Date().toISOString(),
       })
-      for (const ent of extracted) {
+      for (const concept of newConcepts) {
+        const slug = this.sanitizeFilename(concept.name)
         wikiIndex.addEntry({
-          title: ent.name,
-          path: ent.path,
-          category: ent.category,
-          summary: ent.description.slice(0, 100) + '...',
+          title: concept.name,
+          path: `pages/${slug}.md`,
+          category: 'pages',
+          summary: concept.description.slice(0, 100) + '...',
           tags: [],
           updated: new Date().toISOString(),
         })
@@ -99,18 +158,17 @@ ${summary}
 
       this.emit(taskId, 'log', 95, 'Updating change log...')
 
-      const pagesAffected: string[] = [summaryPath, ...extracted.map(e => e.path)]
       const logEntry: LogEntry = {
         timestamp: new Date().toISOString(),
         operation: 'ingest',
         source,
-        description: `Ingested "${title}" — created 1 summary and ${extracted.length} entity/concept pages`,
-        pagesAffected,
+        description: `Ingested "${title}" — ${newConcepts.length} new concepts, ${analysis.relatedPages.length} relations found`,
+        pagesAffected: createdPaths,
       }
       await this.wikiManager.appendLog(logEntry)
 
       this.emit(taskId, 'done', 100, 'Ingestion complete!')
-      logger.info('IngestionPipeline', `Processed: ${title}`)
+      logger.info('IngestionPipeline', `Processed: ${title} (${newConcepts.length} new concepts)`)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       logger.error('IngestionPipeline', `Failed to process "${title}"`, {
@@ -129,93 +187,89 @@ ${summary}
     }
   }
 
-  private async generateSummary(
+  private async analyzeDocument(
     rawContent: string,
     title: string,
-  ): Promise<string> {
-    const systemPrompt = `You are a Wiki summarizer. Given a document, create a detailed markdown summary that:
-1. Captures the key points and main ideas
-2. Uses bullet points for clarity
-3. Preserves important facts, data, and quotes
-4. Is well-structured with sections if needed
+  ): Promise<{
+    summary: string
+    concepts: Array<{ name: string; description: string }>
+    relatedPages: string[]
+    tags: string[]
+  }> {
+    const systemPrompt = `You are a Wiki analyst. Your job is to analyze a document and produce structured knowledge.
 
-Document title: ${title}`
+Return a JSON object with this exact structure:
+{
+  "summary": "A thorough markdown summary of the document (preserve key facts, data, decisions, definitions)",
+  "concepts": [
+    { "name": "Concept Name", "description": "1-2 sentence description" }
+  ],
+  "relatedPages": ["Related Topic 1", "Related Topic 2"],
+  "tags": ["tag1", "tag2", "tag3"]
+}
+
+Rules:
+- Extract ALL important concepts, entities, and definitions
+- Be precise with numbers, dates, and facts
+- Concepts should be encyclopedic and reusable across pages
+- Tags should be lowercase and generic`
 
     const truncated = rawContent.slice(0, 15000)
     const response = await this.llmProvider.chat({
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Summarize this document:\n\n${truncated}` },
+        { role: 'user', content: `Analyze this document titled "${title}":\n\n${truncated}` },
       ],
-      temperature: 0.3,
+      temperature: 0.2,
     })
 
-    return response.content
-  }
-
-  private async extractEntities(
-    rawContent: string,
-    _pageSlug: string,
-    title: string,
-  ): Promise<Array<{ name: string; category: string; path: string; description: string }>> {
-    const results: Array<{ name: string; category: string; path: string; description: string }> = []
-    const systemPrompt = `You are an entity extractor. Given a document, extract the main entities and concepts mentioned.
-For each entity/concept, provide a brief description (1-2 sentences).
-Format as JSON array: [{"name": "...", "type": "entity|concept", "description": "..."}]`
-
-    const truncated = rawContent.slice(0, 10000)
     try {
-      const response = await this.llmProvider.chat({
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: truncated },
-        ],
-        temperature: 0.3,
-      })
-
       const json = response.content
         .replace(/```json\n?/g, '')
         .replace(/```\n?/g, '')
         .trim()
-      const entities = JSON.parse(json) as Array<{
-        name: string
-        type: string
-        description: string
-      }>
-
-      for (const entity of entities) {
-        const slug = entity.name
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-|-$/g, '')
-        const category = entity.type === 'entity' ? 'entities' : 'concepts'
-        const path = `${category}/${slug}.md`
-        const existing = await this.wikiManager.readPage(path)
-
-        if (!existing) {
-          const content = `# ${entity.name}
-
-${entity.description}
-
----
-
-*Extracted from: [[${title}]]*
-*Created: ${new Date().toISOString()}*
-`
-          await this.wikiManager.writePage(path, content)
-        }
-
-        results.push({
-          name: entity.name,
-          category,
-          path,
-          description: entity.description,
-        })
+      return JSON.parse(json)
+    } catch {
+      return {
+        summary: response.content,
+        concepts: [],
+        relatedPages: [],
+        tags: [],
       }
-    } catch (err) {
-      logger.warn('IngestionPipeline', 'Entity extraction failed', err)
     }
+  }
 
-    return results
+  private detectRawCategory(source: string): string {
+    const url = source.toLowerCase()
+    const filename = source.split('/').pop()?.toLowerCase() || ''
+
+    let hostname = ''
+    try {
+      hostname = new URL(source).hostname.toLowerCase()
+    } catch {
+      hostname = ''
+    }
+    const isGitHubHost = hostname === 'github.com' || hostname.endsWith('.github.com')
+
+    if (filename.endsWith('.pdf')) return 'pdfs'
+    if (filename.endsWith('.mp3') || filename.endsWith('.wav') || filename.endsWith('.ogg')) return 'audio'
+    if (isGitHubHost || filename.endsWith('.py') || filename.endsWith('.js') || filename.endsWith('.rs')) return 'code'
+    if (filename.endsWith('.json') || filename.endsWith('.csv') || filename.endsWith('.sql')) return 'data'
+    if (filename.endsWith('.txt') || filename.endsWith('.md')) return 'meetings'
+    if (url.includes('chat') || url.includes('slack') || url.includes('discord')) return 'chat'
+    return 'other'
+  }
+
+  private sanitizeFilename(name: string): string {
+    return name
+      .replace(/[^a-zA-Z0-9_\-\s]/g, '')
+      .trim()
+      .replace(/\s+/g, '-')
+      .toLowerCase()
+  }
+
+  private getExtension(source: string): string {
+    const parts = source.split('.')
+    return parts.length > 1 ? `.${parts[parts.length - 1].split(/[/?#]/)[0].toLowerCase()}` : '.txt'
   }
 }

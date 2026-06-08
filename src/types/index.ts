@@ -1,7 +1,7 @@
 export interface PageMeta {
   title: string
   path: string
-  category: 'entity' | 'concept' | 'summary' | 'query'
+  category: 'entity' | 'concept' | 'summary' | 'query' | 'page'
   created: string
   updated: string
   tags: string[]
@@ -82,4 +82,45 @@ export interface WikiIndexEntry {
   summary: string
   tags: string[]
   updated: string
+}
+
+export interface LintIssue {
+  type: 'broken-link' | 'duplicate' | 'contradiction' | 'schema-violation'
+  severity: 'error' | 'warning' | 'info'
+  file: string
+  line?: number
+  message: string
+  detail?: string
+}
+
+export interface LintResult {
+  passed: boolean
+  issues: LintIssue[]
+  checkedAt: string
+  stats: {
+    totalFiles: number
+    brokenLinks: number
+    duplicates: number
+    contradictions: number
+    schemaViolations: number
+  }
+}
+
+export interface RawFileInfo {
+  name: string
+  path: string
+  type: 'pdf' | 'audio' | 'chat' | 'code' | 'data' | 'meeting' | 'other'
+  size: number
+  importedAt: string
+  ingested: boolean
+}
+
+export interface QueryRecord {
+  id: string
+  question: string
+  answer: string
+  planFile: string
+  outputFile: string
+  createdAt: string
+  pagesReferenced: string[]
 }

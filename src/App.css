@@ -168,6 +168,10 @@ body,
   font-size: 14px;
 }
 
+.tree-subdir {
+  padding-left: 24px;
+}
+
 .tree-file {
   display: flex;
   align-items: center;
@@ -942,6 +946,165 @@ body,
 
 .token-status.ok {
   color: var(--success);
+}
+
+/* Wiki Maintenance */
+.maintenance-actions {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.maintenance-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.maintenance-info {
+  flex: 1;
+}
+
+.maintenance-info strong {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.maintenance-result {
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: var(--bg-tertiary);
+}
+
+.maintenance-result.success {
+  color: var(--success);
+  background: rgba(0, 184, 148, 0.1);
+}
+
+.maintenance-result.error {
+  color: var(--error);
+  background: rgba(225, 112, 85, 0.1);
+}
+
+.lint-report {
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.lint-report.success {
+  border-color: var(--success);
+}
+
+.lint-report.warning {
+  border-color: var(--warning);
+}
+
+.lint-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.lint-badge {
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.lint-badge.pass {
+  background: rgba(0, 184, 148, 0.2);
+  color: var(--success);
+}
+
+.lint-badge.fail {
+  background: rgba(253, 203, 110, 0.2);
+  color: var(--warning);
+}
+
+.lint-stats {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.lint-issues {
+  max-height: 300px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lint-issue {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  background: var(--bg-tertiary);
+}
+
+.lint-issue.lint-error {
+  border-left: 3px solid var(--error);
+}
+
+.lint-issue.lint-warning {
+  border-left: 3px solid var(--warning);
+}
+
+.lint-issue.lint-info {
+  border-left: 3px solid var(--accent);
+}
+
+.lint-issue-type {
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+.lint-issue-severity {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.lint-issue.lint-error .lint-issue-severity {
+  background: rgba(225, 112, 85, 0.2);
+  color: var(--error);
+}
+
+.lint-issue.lint-warning .lint-issue-severity {
+  background: rgba(253, 203, 110, 0.2);
+  color: var(--warning);
+}
+
+.lint-issue.lint-info .lint-issue-severity {
+  background: rgba(108, 92, 231, 0.2);
+  color: var(--accent);
+}
+
+.lint-issue-file {
+  color: var(--text-muted);
+  font-family: monospace;
+}
+
+.lint-issue-msg {
+  color: var(--text-primary);
+  flex: 1;
 }
 
 /* Scrollbar */

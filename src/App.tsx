@@ -12,7 +12,11 @@ import './App.css'
 import './components/Sidebar.css'
 
 const memStore = new Map<string, string>()
-const memDirs = new Set<string>(['wiki', 'wiki/entities', 'wiki/concepts', 'wiki/summaries', 'wiki/queries'])
+const memDirs = new Set<string>([
+  'wiki', 'wiki/pages',
+  'raw', 'raw/pdfs', 'raw/meetings', 'raw/audio', 'raw/chat', 'raw/code', 'raw/data', 'raw/other',
+  'query', 'query/plans', 'query/outputs',
+])
 
 function isTauri(): boolean {
   return typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__ !== undefined
