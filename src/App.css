@@ -866,6 +866,36 @@ html, body, #root {
   gap: 8px;
 }
 
+/* GitHub Token Settings */
+.github-token-form {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.settings-description {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.token-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.token-status {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.token-status.ok {
+  color: var(--success);
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

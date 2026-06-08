@@ -45,6 +45,10 @@ export class OpenAIProvider implements LLMProvider {
       throw new Error(`OpenAI API error ${res.status}: ${err}`)
     }
     const data = await res.json()
+    if (!data.choices?.[0]?.message?.content) {
+      const snippet = JSON.stringify(data).slice(0, 200)
+      throw new Error(`OpenAI API returned unexpected response — missing choices[0].message.content: ${snippet}`)
+    }
     return {
       content: data.choices[0].message.content,
       model: data.model,
