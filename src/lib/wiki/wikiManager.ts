@@ -115,7 +115,7 @@ Last updated: ${new Date().toISOString()}
       const files = await this.listPages(cat)
       node.children = files.map(f => ({
         name: f.split('/').pop() || f,
-        path: f,
+        path: `${cat}/${f}`,
         type: 'file' as const,
       }))
       root.push(node)

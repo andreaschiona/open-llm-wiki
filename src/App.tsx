@@ -11,51 +11,70 @@ import type { AppView } from './types'
 import './App.css'
 import './components/Sidebar.css'
 
+const memStore = new Map<string, string>()
+const memDirs = new Set<string>(['wiki', 'wiki/entities', 'wiki/concepts', 'wiki/summaries', 'wiki/queries'])
+
+function isTauri(): boolean {
+  return typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__ !== undefined
+}
+
 const fileOps = {
   readFile: async (path: string): Promise<string> => {
-    try {
-      const { readTextFile, BaseDirectory } = await import('@tauri-apps/plugin-fs')
-      return await readTextFile(path, { baseDir: BaseDirectory.AppData })
-    } catch {
+    if (isTauri()) {
       try {
-        const res = await fetch(`/static/${path}`)
-        if (res.ok) return await res.text()
+        const { readTextFile, BaseDirectory } = await import('@tauri-apps/plugin-fs')
+        return await readTextFile(path, { baseDir: BaseDirectory.AppData })
       } catch {}
-      return ''
     }
+    return memStore.get(path) ?? ''
   },
   writeFile: async (path: string, content: string): Promise<void> => {
-    try {
-      const { writeTextFile, BaseDirectory } = await import('@tauri-apps/plugin-fs')
-      await writeTextFile(path, content, { baseDir: BaseDirectory.AppData })
-    } catch (e) {
-      console.warn('File write error:', e)
+    if (isTauri()) {
+      try {
+        const { writeTextFile, BaseDirectory } = await import('@tauri-apps/plugin-fs')
+        await writeTextFile(path, content, { baseDir: BaseDirectory.AppData })
+        return
+      } catch {}
     }
+    memStore.set(path, content)
   },
   listDir: async (path: string): Promise<string[]> => {
-    try {
-      const { readDir, BaseDirectory } = await import('@tauri-apps/plugin-fs')
-      const entries = await readDir(path, { baseDir: BaseDirectory.AppData })
-      return entries.map(e => e.name)
-    } catch {
-      return []
+    if (isTauri()) {
+      try {
+        const { readDir, BaseDirectory } = await import('@tauri-apps/plugin-fs')
+        const entries = await readDir(path, { baseDir: BaseDirectory.AppData })
+        return entries.map(e => e.name)
+      } catch {}
     }
+    const prefix = path.endsWith('/') ? path : path + '/'
+    const names = new Set<string>()
+    for (const key of memStore.keys()) {
+      if (key.startsWith(prefix)) {
+        const rest = key.slice(prefix.length)
+        const name = rest.split('/')[0]
+        if (name) names.add(name)
+      }
+    }
+    return [...names].filter(n => n.endsWith('.md'))
   },
   createDir: async (path: string): Promise<void> => {
-    try {
-      const { mkdir, BaseDirectory } = await import('@tauri-apps/plugin-fs')
-      await mkdir(path, { baseDir: BaseDirectory.AppData, recursive: true })
-    } catch {
-      console.warn('Directory creation not available')
+    if (isTauri()) {
+      try {
+        const { mkdir, BaseDirectory } = await import('@tauri-apps/plugin-fs')
+        await mkdir(path, { baseDir: BaseDirectory.AppData, recursive: true })
+        return
+      } catch {}
     }
+    memDirs.add(path)
   },
   fileExists: async (path: string): Promise<boolean> => {
-    try {
-      const { exists, BaseDirectory } = await import('@tauri-apps/plugin-fs')
-      return await exists(path, { baseDir: BaseDirectory.AppData })
-    } catch {
-      return false
+    if (isTauri()) {
+      try {
+        const { exists, BaseDirectory } = await import('@tauri-apps/plugin-fs')
+        return await exists(path, { baseDir: BaseDirectory.AppData })
+      } catch {}
     }
+    return memStore.has(path) || memDirs.has(path)
   },
 }
 
