@@ -123,6 +123,11 @@ body,
   padding: 8px;
 }
 
+.ingestion-panel h2 {
+  font-size: 22px;
+  margin-bottom: 4px;
+}
+
 .wiki-empty h2 {
   color: var(--text-primary);
   font-size: 24px;
@@ -402,7 +407,7 @@ body,
 }
 
 .chat-message.user .chat-message-role {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgb(255 255 255 / 70%);
 }
 
 .chat-message-content {
@@ -473,11 +478,6 @@ body,
   overflow-y: auto;
   width: 100%;
   max-width: 700px;
-}
-
-.ingestion-panel h2 {
-  font-size: 22px;
-  margin-bottom: 4px;
 }
 
 .ingestion-subtitle {
@@ -602,7 +602,7 @@ body,
 }
 
 .btn-danger:hover {
-  background: rgba(225, 112, 85, 0.15);
+  background: rgb(225 112 85 / 15%);
   color: var(--error);
 }
 
