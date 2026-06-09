@@ -123,6 +123,68 @@ body,
   padding: 8px;
 }
 
+.wiki-empty h2 {
+  color: var(--text-primary);
+  font-size: 24px;
+}
+
+.wiki-empty p {
+  font-size: 15px;
+  max-width: 400px;
+}
+
+/* Markdown */
+.markdown-body {
+  line-height: 1.7;
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.markdown-body h1 {
+  font-size: 28px;
+  margin: 0 0 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.markdown-body h2 {
+  font-size: 22px;
+  margin: 24px 0 12px;
+}
+
+.markdown-body h3 {
+  font-size: 18px;
+  margin: 20px 0 10px;
+}
+
+.markdown-body h4 {
+  font-size: 16px;
+  margin: 16px 0 8px;
+}
+
+.markdown-body p {
+  margin: 8px 0;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+
+.markdown-body li {
+  margin: 4px 0;
+}
+
+.markdown-body a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.markdown-body a:hover {
+  text-decoration: underline;
+}
+
 .chat-header h2 {
   font-size: 18px;
   margin: 0;
@@ -217,68 +279,6 @@ body,
   text-align: center;
   color: var(--text-secondary);
   gap: 12px;
-}
-
-.wiki-empty h2 {
-  color: var(--text-primary);
-  font-size: 24px;
-}
-
-.wiki-empty p {
-  font-size: 15px;
-  max-width: 400px;
-}
-
-/* Markdown */
-.markdown-body {
-  line-height: 1.7;
-  color: var(--text-primary);
-  font-size: 15px;
-}
-
-.markdown-body h1 {
-  font-size: 28px;
-  margin: 0 0 16px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border);
-}
-
-.markdown-body h2 {
-  font-size: 22px;
-  margin: 24px 0 12px;
-}
-
-.markdown-body h3 {
-  font-size: 18px;
-  margin: 20px 0 10px;
-}
-
-.markdown-body h4 {
-  font-size: 16px;
-  margin: 16px 0 8px;
-}
-
-.markdown-body p {
-  margin: 8px 0;
-}
-
-.markdown-body ul,
-.markdown-body ol {
-  margin: 8px 0;
-  padding-left: 24px;
-}
-
-.markdown-body li {
-  margin: 4px 0;
-}
-
-.markdown-body a {
-  color: var(--accent);
-  text-decoration: none;
-}
-
-.markdown-body a:hover {
-  text-decoration: underline;
 }
 
 .markdown-body code {
