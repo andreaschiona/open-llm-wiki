@@ -34,5 +34,3 @@ jobs:
           VALIDATE_TYPESCRIPT_STANDARD: false
           VALIDATE_CHECKOV: false
           VALIDATE_JSCPD: false
-          JSCPD_CONFIG_FILE: .jscpd.json
-          TYPESCRIPT_ES_LINT_RULES: '{"n/no-missing-import":"off","n/no-unsupported-features/es-syntax":"off","n/no-unsupported-features/node-builtins":"off"}'
