@@ -1,5 +1,5 @@
 import { WikiManager } from './wikiManager'
-import type { LintIssue, LintResult } from '../../types'
+import type { LintIssue, LintResult, LintFixResult } from '../../types'
 
 export class WikiLint {
   private wikiManager: WikiManager
@@ -72,7 +72,10 @@ export class WikiLint {
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/^-|-$/g, '')
         const targetPath = `pages/${targetSlug}`
-        if (!existingPaths.has(targetPath) && !existingPaths.has(targetPath + '.md')) {
+        if (
+          !existingPaths.has(targetPath) &&
+          !existingPaths.has(targetPath + '.md')
+        ) {
           issues.push({
             type: 'broken-link',
             severity: 'error',
@@ -132,14 +135,17 @@ export class WikiLint {
     const nameClusters = new Map<string, string[]>()
     for (const file of files) {
       const baseName = file.split('/').pop()?.replace(/\.md$/i, '') || ''
-      const slug = baseName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+      const slug = baseName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
       if (!nameClusters.has(slug)) {
         nameClusters.set(slug, [])
       }
       nameClusters.get(slug)!.push(file)
     }
 
-    for (const [_slug, paths] of nameClusters) {
+    for (const [, paths] of nameClusters) {
       if (paths.length > 1) {
         issues.push({
           type: 'duplicate',
@@ -193,26 +199,39 @@ export class WikiLint {
       if (numbersB.has(concept)) {
         const valB = numbersB.get(concept)!
         if (valA !== valB) {
-          conflicts.push(
-            `Contradictory "${concept}": "${valA}" vs "${valB}"`,
-          )
+          conflicts.push(`Contradictory "${concept}": "${valA}" vs "${valB}"`)
         }
       }
     }
 
     const negRegex = /(?:non|not|never|no)\s+(\w+(?:\s+\w+){0,3})/gi
-    const negA = new Set([...contentA.matchAll(negRegex)].map(m => m[1].toLowerCase()))
-    const posA = new Set([...contentA.matchAll(/(?:è|e'?|is|was|are)\s+(\w+(?:\s+\w+){0,3})/gi)].map(m => m[1].toLowerCase()))
+    const negA = new Set(
+      [...contentA.matchAll(negRegex)].map((m) => m[1].toLowerCase()),
+    )
+    const posA = new Set(
+      [
+        ...contentA.matchAll(/(?:è|e'?|is|was|are)\s+(\w+(?:\s+\w+){0,3})/gi),
+      ].map((m) => m[1].toLowerCase()),
+    )
 
     for (const neg of negA) {
       if (posA.has(neg)) continue
       if (contentB.toLowerCase().includes(neg)) {
-        const negInB = contentB.toLowerCase().includes(`not ${neg}`) ||
+        const negInB =
+          contentB.toLowerCase().includes(`not ${neg}`) ||
           contentB.toLowerCase().includes(`non ${neg}`)
         if (!negInB) {
-          const posInB = new Set([...contentB.matchAll(/(?:è|e'?|is|was|are)\s+(\w+(?:\s+\w+){0,3})/gi)].map(m => m[1].toLowerCase()))
+          const posInB = new Set(
+            [
+              ...contentB.matchAll(
+                /(?:è|e'?|is|was|are)\s+(\w+(?:\s+\w+){0,3})/gi,
+              ),
+            ].map((m) => m[1].toLowerCase()),
+          )
           if (posInB.has(neg)) {
-            conflicts.push(`Possible contradiction: page A negates "${neg}" while page B affirms it`)
+            conflicts.push(
+              `Possible contradiction: page A negates "${neg}" while page B affirms it`,
+            )
           }
         }
       }
@@ -221,9 +240,108 @@ export class WikiLint {
     return conflicts
   }
 
+  async runLintAndFix(): Promise<LintResult> {
+    const issues: LintIssue[] = []
+    const fixes: LintFixResult = { fixed: 0, details: [] }
+
+    const brokenLinkIssues = await this.checkBrokenLinks()
+    issues.push(...brokenLinkIssues)
+
+    const duplicateIssues = await this.checkDuplicates()
+    issues.push(...duplicateIssues)
+
+    const contradictionIssues = await this.checkContradictions()
+    issues.push(...contradictionIssues)
+
+    const schemaIssues = await this.checkSchema()
+    issues.push(...schemaIssues)
+
+    const totalFiles = (await this.wikiManager.listAllWikiFiles()).length
+
+    const stats = {
+      totalFiles,
+      brokenLinks: brokenLinkIssues.length,
+      duplicates: duplicateIssues.length,
+      contradictions: contradictionIssues.length,
+      schemaViolations: schemaIssues.length,
+    }
+
+    const fixableIssues = issues.filter(
+      (i) =>
+        i.type === 'schema-violation' &&
+        (i.message === 'Missing H1 title' ||
+          i.message === 'No tags defined' ||
+          i.message === 'Contains TODO/FIXME markers'),
+    )
+
+    const fixedFiles = new Set<string>()
+    for (const issue of fixableIssues) {
+      if (fixedFiles.has(issue.file)) continue
+      fixedFiles.add(issue.file)
+
+      const page = await this.wikiManager.readPage(issue.file)
+      if (!page) continue
+
+      let newContent = page.content
+      let fileChanged = false
+
+      if (
+        issue.message === 'Missing H1 title' &&
+        !newContent.match(/^#\s+.+/m)
+      ) {
+        const title =
+          issue.file.split('/').pop()?.replace(/\.md$/i, '') || 'Untitled'
+        newContent = `# ${title}\n\n${newContent}`
+        fileChanged = true
+        fixes.details.push(`Added H1 title "${title}" to ${issue.file}`)
+      }
+
+      if (issue.message === 'No tags defined') {
+        const tagsLine = page.content.match(/^tags:\s*(.+)$/m)
+        if (!tagsLine) {
+          newContent = newContent.replace(/^---\s*\n/, '')
+          const titleMatch = newContent.match(/^(#\s+.+)/m)
+          if (titleMatch) {
+            newContent = newContent.replace(
+              titleMatch[0],
+              `${titleMatch[0]}\ntags: untagged`,
+            )
+          } else {
+            newContent = `tags: untagged\n${newContent}`
+          }
+          fileChanged = true
+          fixes.details.push(`Added missing tags metadata to ${issue.file}`)
+        }
+      }
+
+      if (issue.message === 'Contains TODO/FIXME markers') {
+        newContent = newContent.replace(/^(.*?TODO.*?)$/gim, '<!-- $1 -->')
+        newContent = newContent.replace(/^(.*?FIXME.*?)$/gim, '<!-- $1 -->')
+        fileChanged = true
+        fixes.details.push(`Commented out TODO/FIXME markers in ${issue.file}`)
+      }
+
+      if (fileChanged) {
+        await this.wikiManager.writePage(issue.file, newContent)
+        fixes.fixed++
+      }
+    }
+
+    const remaining = issues.filter((i) => !fixableIssues.includes(i))
+
+    return {
+      passed: remaining.length === 0,
+      issues: remaining,
+      checkedAt: new Date().toISOString(),
+      stats,
+      fixes: fixes.fixed > 0 ? fixes : undefined,
+    }
+  }
+
   private extractAssertiveNumbers(content: string): Map<string, string> {
     const map = new Map<string, string>()
-    const pattern = /(?:population|popolazione|count|numero|amount|importo|value|valore|total|totale|cost|costo|price|prezzo|size|dimensione|year|anno|version|versione)[:\s]+([\d,]+(?:\.\d+)?)/gi
+    const pattern =
+      /(?:population|popolazione|count|numero|amount|importo|value|valore|total|totale|cost|costo|price|prezzo|size|dimensione|year|anno|version|versione)[:\s]+([\d,]+(?:\.\d+)?)/gi
     let match: RegExpExecArray | null
     while ((match = pattern.exec(content)) !== null) {
       const key = match[0].split(/[:]/)[0].trim().toLowerCase()
@@ -249,12 +367,16 @@ export class WikiLint {
             severity: 'error',
             file,
             message: 'Missing H1 title',
-            detail: 'Every wiki page must start with a single H1 (# Title) heading',
+            detail:
+              'Every wiki page must start with a single H1 (# Title) heading',
           })
         }
       }
 
-      if (!page.meta.title || page.meta.title === file.split('/').pop()?.replace('.md', '')) {
+      if (
+        !page.meta.title ||
+        page.meta.title === file.split('/').pop()?.replace('.md', '')
+      ) {
         issues.push({
           type: 'schema-violation',
           severity: 'warning',
@@ -271,7 +393,8 @@ export class WikiLint {
           severity: 'info',
           file,
           message: 'No tags defined',
-          detail: 'Consider adding tags as metadata (tags: tag1, tag2) for better discoverability',
+          detail:
+            'Consider adding tags as metadata (tags: tag1, tag2) for better discoverability',
         })
       }
 

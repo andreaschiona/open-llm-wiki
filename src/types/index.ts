@@ -49,7 +49,13 @@ export interface IngestionTask {
   id: string
   type: 'url' | 'pdf' | 'file'
   source: string
-  status: 'pending' | 'downloading' | 'analyzing' | 'updating' | 'done' | 'error'
+  status:
+    | 'pending'
+    | 'downloading'
+    | 'analyzing'
+    | 'updating'
+    | 'done'
+    | 'error'
   progress: number
   progressLabel: string
   error?: string
@@ -93,6 +99,11 @@ export interface LintIssue {
   detail?: string
 }
 
+export interface LintFixResult {
+  fixed: number
+  details: string[]
+}
+
 export interface LintResult {
   passed: boolean
   issues: LintIssue[]
@@ -104,6 +115,7 @@ export interface LintResult {
     contradictions: number
     schemaViolations: number
   }
+  fixes?: LintFixResult
 }
 
 export interface RawFileInfo {
