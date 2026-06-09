@@ -1,5 +1,11 @@
 import { logger } from '../utils/logger'
-import type { WikiPage, PageMeta, LogEntry, WikiTreeNode, RawFileInfo } from '../../types'
+import type {
+  WikiPage,
+  PageMeta,
+  LogEntry,
+  WikiTreeNode,
+  RawFileInfo,
+} from '../../types'
 
 const WIKI_BASE = 'wiki'
 const RAW_BASE = 'raw'
@@ -12,7 +18,7 @@ interface FileOps {
   createDir(path: string): Promise<void>
   fileExists(path: string): Promise<boolean>
   deleteFile?(path: string): Promise<void>
-  deleteDir?(path: string): Promise<void>
+  deleteDir?(path: string, recursive?: boolean): Promise<void>
 }
 
 export class WikiManager {
@@ -46,7 +52,15 @@ export class WikiManager {
       }
     }
 
-    const rawDirs = ['pdfs', 'meetings', 'audio', 'chat', 'code', 'data', 'other']
+    const rawDirs = [
+      'pdfs',
+      'meetings',
+      'audio',
+      'chat',
+      'code',
+      'data',
+      'other',
+    ]
     for (const dir of rawDirs) {
       const fullPath = this.resolveRaw(dir)
       if (!(await this.fileOps.fileExists(fullPath))) {
@@ -119,7 +133,7 @@ Last updated: ${new Date().toISOString()}
   async listPages(): Promise<string[]> {
     const searchPath = this.resolvePath('pages')
     const entries = await this.fileOps.listDir(searchPath)
-    return entries.filter(e => e.endsWith('.md'))
+    return entries.filter((e) => e.endsWith('.md'))
   }
 
   async listAllWikiFiles(): Promise<string[]> {
@@ -151,7 +165,7 @@ Last updated: ${new Date().toISOString()}
       children: [],
     }
     const pages = await this.listPages()
-    wikiNode.children = pages.map(f => ({
+    wikiNode.children = pages.map((f) => ({
       name: f.split('/').pop() || f,
       path: `wiki/pages/${f}`,
       type: 'file' as const,
@@ -164,7 +178,15 @@ Last updated: ${new Date().toISOString()}
       type: 'directory',
       children: [],
     }
-    const rawDirs = ['pdfs', 'meetings', 'audio', 'chat', 'code', 'data', 'other']
+    const rawDirs = [
+      'pdfs',
+      'meetings',
+      'audio',
+      'chat',
+      'code',
+      'data',
+      'other',
+    ]
     for (const cat of rawDirs) {
       const catNode: WikiTreeNode = {
         name: cat,
@@ -173,7 +195,7 @@ Last updated: ${new Date().toISOString()}
         children: [],
       }
       const files = await this.listRawFiles(cat)
-      catNode.children = files.map(f => ({
+      catNode.children = files.map((f) => ({
         name: f,
         path: `raw/${cat}/${f}`,
         type: 'file' as const,
@@ -197,7 +219,7 @@ Last updated: ${new Date().toISOString()}
         children: [],
       }
       const files = await this.listQueryFiles(cat)
-      catNode.children = files.map(f => ({
+      catNode.children = files.map((f) => ({
         name: f,
         path: `query/${cat}/${f}`,
         type: 'file' as const,
@@ -214,7 +236,10 @@ Last updated: ${new Date().toISOString()}
     const line = `- **${entry.timestamp}** | ${entry.operation} | ${entry.source} — ${entry.description}\n`
     const existing = await this.fileOps.readFile(logPath)
     await this.fileOps.writeFile(logPath, existing + line)
-    logger.info('WikiManager', `Log entry added: ${entry.operation} ${entry.source}`)
+    logger.info(
+      'WikiManager',
+      `Log entry added: ${entry.operation} ${entry.source}`,
+    )
   }
 
   async getLog(): Promise<string> {
@@ -233,15 +258,19 @@ Last updated: ${new Date().toISOString()}
     const index = await this.getIndex()
     const lines = index.split('\n')
     return lines
-      .filter(l => l.toLowerCase().includes(keyword.toLowerCase()))
-      .map(l => l.replace(/^[-*]\s*\[([^\]]+)\]\(([^)]+)\)/, '$2').trim())
+      .filter((l) => l.toLowerCase().includes(keyword.toLowerCase()))
+      .map((l) => l.replace(/^[-*]\s*\[([^\]]+)\]\(([^)]+)\)/, '$2').trim())
   }
 
   async readRawFile(category: string, filename: string): Promise<string> {
     return this.fileOps.readFile(this.resolveRaw(`${category}/${filename}`))
   }
 
-  async writeRawFile(category: string, filename: string, content: string): Promise<void> {
+  async writeRawFile(
+    category: string,
+    filename: string,
+    content: string,
+  ): Promise<void> {
     const path = this.resolveRaw(`${category}/${filename}`)
     await this.fileOps.writeFile(path, content)
     logger.info('WikiManager', `Raw file saved: ${category}/${filename}`)
@@ -267,14 +296,27 @@ Last updated: ${new Date().toISOString()}
 
   async getAllRawFiles(): Promise<RawFileInfo[]> {
     const result: RawFileInfo[] = []
-    const categories = ['pdfs', 'meetings', 'audio', 'chat', 'code', 'data', 'other']
+    const categories = [
+      'pdfs',
+      'meetings',
+      'audio',
+      'chat',
+      'code',
+      'data',
+      'other',
+    ]
     for (const cat of categories) {
       const files = await this.listRawFiles(cat)
       for (const f of files) {
         result.push({
           name: f,
           path: `raw/${cat}/${f}`,
-          type: cat === 'pdfs' ? 'pdf' : cat === 'meetings' ? 'meeting' : cat as RawFileInfo['type'],
+          type:
+            cat === 'pdfs'
+              ? 'pdf'
+              : cat === 'meetings'
+                ? 'meeting'
+                : (cat as RawFileInfo['type']),
           size: 0,
           importedAt: new Date().toISOString(),
           ingested: false,
@@ -306,7 +348,7 @@ Last updated: ${new Date().toISOString()}
     const path = category ? this.resolveQuery(category) : this.resolveQuery('')
     try {
       const entries = await this.fileOps.listDir(path)
-      return entries.filter(e => e.endsWith('.md'))
+      return entries.filter((e) => e.endsWith('.md'))
     } catch {
       return []
     }
@@ -317,25 +359,26 @@ Last updated: ${new Date().toISOString()}
   }
 
   async clearAll(): Promise<void> {
-    const sections = [
-      { base: WIKI_BASE, dirs: ['pages', ''] },
-      { base: RAW_BASE, dirs: ['pdfs', 'meetings', 'audio', 'chat', 'code', 'data', 'other'] },
-      { base: QUERY_BASE, dirs: ['plans', 'outputs'] },
-    ]
-    for (const section of sections) {
-      for (const dir of section.dirs) {
-        const path = dir ? `${section.base}/${dir}` : section.base
+    const roots = [WIKI_BASE, RAW_BASE, QUERY_BASE]
+    for (const root of roots) {
+      if (this.fileOps.deleteDir) {
         try {
-          const files = await this.fileOps.listDir(path)
-          for (const f of files) {
-            const fullPath = `${path}/${f}`
-            if (this.fileOps.deleteFile) {
-              await this.fileOps.deleteFile(fullPath)
-            }
-          }
+          await this.fileOps.deleteDir(root, true)
+          continue
         } catch {
-          /* skip */
+          /* fall through to per-file deletion */
         }
+      }
+      try {
+        const entries = await this.fileOps.listDir(root)
+        for (const entry of entries) {
+          const fullPath = `${root}/${entry}`
+          if (this.fileOps.deleteFile) {
+            await this.fileOps.deleteFile(fullPath)
+          }
+        }
+      } catch {
+        /* skip */
       }
     }
     await this.init()
@@ -347,12 +390,13 @@ Last updated: ${new Date().toISOString()}
     const tagsMatch = content.match(/^tags:\s*(.+)$/m)
     const cat = path.startsWith('wiki/') ? 'page' : path.split('/')[0]
     return {
-      title: titleMatch?.[1] || path.split('/').pop()?.replace('.md', '') || path,
+      title:
+        titleMatch?.[1] || path.split('/').pop()?.replace('.md', '') || path,
       path,
       category: (cat as PageMeta['category']) || 'page',
       created: '',
       updated: new Date().toISOString(),
-      tags: tagsMatch?.[1]?.split(',').map(t => t.trim()) || [],
+      tags: tagsMatch?.[1]?.split(',').map((t) => t.trim()) || [],
     }
   }
 }

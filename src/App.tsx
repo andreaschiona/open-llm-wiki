@@ -13,20 +13,34 @@ import './components/Sidebar.css'
 
 const memStore = new Map<string, string>()
 const memDirs = new Set<string>([
-  'wiki', 'wiki/pages',
-  'raw', 'raw/pdfs', 'raw/meetings', 'raw/audio', 'raw/chat', 'raw/code', 'raw/data', 'raw/other',
-  'query', 'query/plans', 'query/outputs',
+  'wiki',
+  'wiki/pages',
+  'raw',
+  'raw/pdfs',
+  'raw/meetings',
+  'raw/audio',
+  'raw/chat',
+  'raw/code',
+  'raw/data',
+  'raw/other',
+  'query',
+  'query/plans',
+  'query/outputs',
 ])
 
 function isTauri(): boolean {
-  return typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__ !== undefined
+  return (
+    typeof window !== 'undefined' &&
+    (window as Record<string, unknown>).__TAURI_INTERNALS__ !== undefined
+  )
 }
 
 const fileOps = {
   readFile: async (path: string): Promise<string> => {
     if (isTauri()) {
       try {
-        const { readTextFile, BaseDirectory } = await import('@tauri-apps/plugin-fs')
+        const { readTextFile, BaseDirectory } =
+          await import('@tauri-apps/plugin-fs')
         return await readTextFile(path, { baseDir: BaseDirectory.AppData })
       } catch {}
     }
@@ -35,7 +49,8 @@ const fileOps = {
   writeFile: async (path: string, content: string): Promise<void> => {
     if (isTauri()) {
       try {
-        const { writeTextFile, BaseDirectory } = await import('@tauri-apps/plugin-fs')
+        const { writeTextFile, BaseDirectory } =
+          await import('@tauri-apps/plugin-fs')
         await writeTextFile(path, content, { baseDir: BaseDirectory.AppData })
         return
       } catch {}
@@ -47,7 +62,7 @@ const fileOps = {
       try {
         const { readDir, BaseDirectory } = await import('@tauri-apps/plugin-fs')
         const entries = await readDir(path, { baseDir: BaseDirectory.AppData })
-        return entries.map(e => e.name)
+        return entries.map((e) => e.name)
       } catch {}
     }
     const prefix = path.endsWith('/') ? path : path + '/'
@@ -59,7 +74,7 @@ const fileOps = {
         if (name) names.add(name)
       }
     }
-    return [...names].filter(n => n.endsWith('.md'))
+    return [...names].filter((n) => n.endsWith('.md'))
   },
   createDir: async (path: string): Promise<void> => {
     if (isTauri()) {
@@ -80,15 +95,63 @@ const fileOps = {
     }
     return memStore.has(path) || memDirs.has(path)
   },
+  deleteFile: async (path: string): Promise<void> => {
+    if (isTauri()) {
+      try {
+        const { remove, BaseDirectory } = await import('@tauri-apps/plugin-fs')
+        await remove(path, { baseDir: BaseDirectory.AppData })
+        return
+      } catch {}
+    }
+    memStore.delete(path)
+  },
+  deleteDir: async (path: string, recursive?: boolean): Promise<void> => {
+    if (isTauri()) {
+      const { remove, BaseDirectory } = await import('@tauri-apps/plugin-fs')
+      try {
+        await remove(path, {
+          baseDir: BaseDirectory.AppData,
+          recursive: recursive ?? false,
+        })
+      } catch {
+        if (recursive) {
+          const { readDir } = await import('@tauri-apps/plugin-fs')
+          const entries = await readDir(path, {
+            baseDir: BaseDirectory.AppData,
+          })
+          for (const entry of entries) {
+            const childPath = `${path}/${entry.name}`
+            if (entry.isDirectory) {
+              await remove(childPath, {
+                baseDir: BaseDirectory.AppData,
+                recursive: true,
+              })
+            } else {
+              await remove(childPath, { baseDir: BaseDirectory.AppData })
+            }
+          }
+          await remove(path, { baseDir: BaseDirectory.AppData })
+        }
+      }
+      return
+    }
+    memDirs.delete(path)
+    const prefix = path.endsWith('/') ? path : path + '/'
+    for (const key of [...memStore.keys()]) {
+      if (key.startsWith(prefix)) {
+        memStore.delete(key)
+      }
+    }
+  },
 }
 
 export default function App() {
   const [activeView, setActiveView] = useState<AppView>('wiki')
-  const initWiki = useWikiStore(s => s.init)
-  const initConfig = useConfigStore(s => s.init)
-  const wikiInitialized = useWikiStore(s => s.initialized)
-  const configInitialized = useConfigStore(s => s.initialized)
-  const checkForUpdates = useUpdateStore(s => s.checkForUpdates)
+  const initWiki = useWikiStore((s) => s.init)
+  const initConfig = useConfigStore((s) => s.init)
+  const wikiInitialized = useWikiStore((s) => s.initialized)
+  const configInitialized = useConfigStore((s) => s.initialized)
+  const checkForUpdates = useUpdateStore((s) => s.checkForUpdates)
 
   useEffect(() => {
     initWiki(fileOps)
@@ -128,9 +191,7 @@ export default function App() {
   return (
     <div className="app-container">
       <Sidebar activeView={activeView} onNavigate={setActiveView} />
-      <main className="main-content">
-        {renderView()}
-      </main>
+      <main className="main-content">{renderView()}</main>
     </div>
   )
 }

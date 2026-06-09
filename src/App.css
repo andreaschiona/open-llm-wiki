@@ -966,6 +966,21 @@ body,
   gap: 16px;
 }
 
+.maintenance-btn-group {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-warning {
+  color: var(--warning);
+  border: 1px solid var(--warning);
+  background: transparent;
+}
+
+.btn-warning:hover {
+  background: rgba(253, 203, 110, 0.15);
+}
+
 .maintenance-info {
   flex: 1;
 }
@@ -1105,6 +1120,31 @@ body,
 .lint-issue-msg {
   color: var(--text-primary);
   flex: 1;
+}
+
+.lint-fixes {
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: rgba(0, 184, 148, 0.1);
+  border-left: 3px solid var(--success);
+  font-size: 13px;
+}
+
+.lint-fixes strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--success);
+}
+
+.lint-fixes ul {
+  margin: 4px 0 0 16px;
+  padding: 0;
+  color: var(--text-primary);
+}
+
+.lint-fixes li {
+  margin: 2px 0;
 }
 
 /* Scrollbar */
