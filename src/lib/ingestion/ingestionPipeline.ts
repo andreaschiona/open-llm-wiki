@@ -124,6 +124,8 @@ ${
       await this.wikiManager.writePage(pagePath, pageContent)
 
       const createdPaths = [pagePath]
+      const pathToTitle = new Map<string, string>()
+      pathToTitle.set(pagePath, title)
       for (const concept of newConcepts) {
         const slug = this.sanitizeFilename(concept.name)
         const conceptPath = `concetti/${slug}.md`
@@ -150,33 +152,46 @@ ${concept.description}
 `
           await this.wikiManager.writePage(conceptPath, conceptContent)
           createdPaths.push(conceptPath)
+          pathToTitle.set(conceptPath, concept.name)
         }
       }
 
       this.emit(taskId, 'index', 85, 'Updating wiki index...')
 
-      const indexContent = await this.wikiManager.getIndex()
-      const wikiIndex = new WikiIndex()
-      wikiIndex.fromMarkdown(indexContent)
-
-      wikiIndex.addEntry({
-        title,
-        path: pagePath,
-        category: targetWiki,
-        summary: analysis.summary.slice(0, 100) + '...',
-        tags: analysis.tags || [],
+      const newEntries = createdPaths.map((p) => ({
+        title:
+          pathToTitle.get(p) || p.split('/').pop()?.replace('.md', '') || '',
+        path: p,
+        summary: '',
+        tags: [] as string[],
         updated: new Date().toISOString(),
-      })
-      for (const concept of newConcepts) {
-        const slug = this.sanitizeFilename(concept.name)
-        wikiIndex.addEntry({
-          title: concept.name,
-          path: `concetti/${slug}.md`,
-          category: 'concetti',
-          summary: concept.description.slice(0, 100) + '...',
-          tags: [],
-          updated: new Date().toISOString(),
-        })
+        category: p.startsWith('concetti/') ? 'concetti' : targetWiki,
+      }))
+
+      // Update the thematic wiki's indice_wiki.md
+      const targetEntries = newEntries.filter((e) => e.category === targetWiki)
+      if (targetEntries.length > 0) {
+        await this.wikiManager.updateThematicWikiIndex(
+          targetWiki,
+          targetEntries,
+        )
+      }
+      const concettiEntries = newEntries.filter(
+        (e) => e.category === 'concetti',
+      )
+      if (concettiEntries.length > 0) {
+        await this.wikiManager.updateThematicWikiIndex(
+          'concetti',
+          concettiEntries,
+        )
+      }
+
+      // Update the main wiki/indice.md
+      const mainIndex = await this.wikiManager.getIndex()
+      const wikiIndex = new WikiIndex()
+      wikiIndex.fromMarkdown(mainIndex)
+      for (const e of newEntries) {
+        wikiIndex.addEntry(e)
       }
       await this.wikiManager.updateIndex(wikiIndex.toMarkdown())
 
