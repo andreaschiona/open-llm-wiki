@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { WikiManager } from '../lib/wiki/wikiManager'
+import { WikiManager, type FileOps } from '../lib/wiki/wikiManager'
 import { WikiIndex } from '../lib/wiki/wikiIndex'
 import type { WikiPage, WikiTreeNode, WikiIndexEntry } from '../types'
 
@@ -13,7 +13,7 @@ interface WikiState {
   logContent: string
   searchResults: WikiIndexEntry[]
   initialized: boolean
-  init: (fileOps: any) => Promise<void>
+  init: (fileOps: FileOps) => Promise<void>
   navigateToPage: (path: string) => Promise<void>
   refreshTree: () => Promise<void>
   refreshIndex: () => Promise<void>

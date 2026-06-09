@@ -11,7 +11,7 @@ const WIKI_BASE = 'wiki'
 const RAW_BASE = 'raw'
 const QUERY_BASE = 'query'
 
-interface FileOps {
+export interface FileOps {
   readFile(path: string): Promise<string>
   writeFile(path: string, content: string): Promise<void>
   listDir(path: string): Promise<string[]>
