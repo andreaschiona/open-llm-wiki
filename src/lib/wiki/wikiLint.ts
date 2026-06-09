@@ -72,7 +72,10 @@ export class WikiLint {
       const wikiLinkRegex = /\[\[([^\]]+)\]\]/g
       let match: RegExpExecArray | null
       while ((match = wikiLinkRegex.exec(page.content)) !== null) {
-        const target = match[1].trim()
+        const raw = match[1].trim()
+        // Handle [[path|label]] format: extract path before |
+        const pipeIdx = raw.indexOf('|')
+        const target = pipeIdx >= 0 ? raw.slice(0, pipeIdx).trim() : raw
         const targetSlug = target
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, '-')
@@ -82,6 +85,13 @@ export class WikiLint {
         const directPath = `${targetSlug}.md`
         if (existingPaths.has(directPath.toLowerCase())) {
           found = true
+        }
+        // If target contains a slash, try it as a full path
+        if (!found && target.includes('/')) {
+          const fullPath = target.endsWith('.md') ? target : `${target}.md`
+          if (existingPaths.has(fullPath.toLowerCase())) {
+            found = true
+          }
         }
         for (const theme of wikiThemes) {
           const themePath = `${theme}/${targetSlug}`
@@ -101,7 +111,7 @@ export class WikiLint {
             type: 'broken-link',
             severity: 'error',
             file,
-            message: `Broken wiki link: [[${target}]]`,
+            message: `Broken wiki link: [[${raw}]]`,
             detail: `Target page "${target}" (${targetSlug}.md) not found in any thematic wiki`,
           })
         }
