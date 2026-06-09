@@ -290,6 +290,12 @@ Rules:
 
   private detectTargetWiki(source: string, tags: string[]): string {
     const sourceLower = source.toLowerCase()
+    let hostname = ''
+    try {
+      hostname = new URL(source).hostname.toLowerCase()
+    } catch {
+      hostname = ''
+    }
     const allTags = tags.map((t) => t.toLowerCase())
     if (
       allTags.some((t) =>
@@ -304,7 +310,8 @@ Rules:
           'software',
         ].includes(t),
       ) ||
-      sourceLower.includes('github.com') ||
+      hostname === 'github.com' ||
+      hostname.endsWith('.github.com') ||
       sourceLower.includes('tool') ||
       sourceLower.includes('api')
     ) {

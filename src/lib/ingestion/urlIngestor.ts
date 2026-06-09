@@ -52,14 +52,29 @@ export class UrlIngestor {
     return text.replace(pattern, (m) => entities[m] || m)
   }
 
+  private stripTagBlocks(text: string, tag: string): string {
+    const open = new RegExp(`<${tag}[^>]*>`, 'gi')
+    const close = new RegExp(`<\\/${tag}[^>]*>`, 'gi')
+    let result = text
+    // Remove complete blocks: <tag...>...</tag...>
+    result = result.replace(
+      new RegExp(`<${tag}[^>]*>[\\s\\S]*?<\\/${tag}[^>]*>`, 'gi'),
+      '',
+    )
+    // Remove any remaining <tag and </tag fragments
+    result = result.replace(open, '')
+    result = result.replace(close, '')
+    return result
+  }
+
   private htmlToMarkdown(html: string): string {
     let text = html
-    text = text.replace(/<script[^>]*>[\s\S]*?<\/script\s*>/gi, '')
-    text = text.replace(/<style[^>]*>[\s\S]*?<\/style\s*>/gi, '')
-    text = text.replace(/<nav[^>]*>[\s\S]*?<\/nav\s*>/gi, '')
-    text = text.replace(/<header[^>]*>[\s\S]*?<\/header\s*>/gi, '')
-    text = text.replace(/<footer[^>]*>[\s\S]*?<\/footer\s*>/gi, '')
-    text = text.replace(/<aside[^>]*>[\s\S]*?<\/aside\s*>/gi, '')
+    text = this.stripTagBlocks(text, 'script')
+    text = this.stripTagBlocks(text, 'style')
+    text = this.stripTagBlocks(text, 'nav')
+    text = this.stripTagBlocks(text, 'header')
+    text = this.stripTagBlocks(text, 'footer')
+    text = this.stripTagBlocks(text, 'aside')
 
     text = text.replace(/<h1[^>]*>/gi, '\n# ')
     text = text.replace(/<h2[^>]*>/gi, '\n## ')
