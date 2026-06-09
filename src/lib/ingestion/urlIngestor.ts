@@ -12,7 +12,8 @@ export class UrlIngestor {
     logger.info('UrlIngestor', `Fetching URL: ${url}`)
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       },
     })
     if (!response.ok) {
@@ -36,14 +37,44 @@ export class UrlIngestor {
     return match ? match[1].trim() : 'Untitled'
   }
 
+  private decodeHtmlEntities(text: string): string {
+    const entities: Record<string, string> = {
+      '&amp;': '&',
+      '&lt;': '<',
+      '&gt;': '>',
+      '&quot;': '"',
+      '&#39;': "'",
+      '&nbsp;': ' ',
+      '&#x27;': "'",
+      '&#x2F;': '/',
+    }
+    const pattern = /&(?:amp|lt|gt|quot|#39|nbsp|#x27|#x2F);/g
+    return text.replace(pattern, (m) => entities[m] || m)
+  }
+
+  private stripTagBlocks(text: string, tag: string): string {
+    const open = new RegExp(`<${tag}[^>]*>`, 'gi')
+    const close = new RegExp(`<\\/${tag}[^>]*>`, 'gi')
+    let result = text
+    // Remove complete blocks: <tag...>...</tag...>
+    result = result.replace(
+      new RegExp(`<${tag}[^>]*>[\\s\\S]*?<\\/${tag}[^>]*>`, 'gi'),
+      '',
+    )
+    // Remove any remaining <tag and </tag fragments
+    result = result.replace(open, '')
+    result = result.replace(close, '')
+    return result
+  }
+
   private htmlToMarkdown(html: string): string {
     let text = html
-    text = text.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-    text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-    text = text.replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '')
-    text = text.replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '')
-    text = text.replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '')
-    text = text.replace(/<aside[^>]*>[\s\S]*?<\/aside>/gi, '')
+    text = this.stripTagBlocks(text, 'script')
+    text = this.stripTagBlocks(text, 'style')
+    text = this.stripTagBlocks(text, 'nav')
+    text = this.stripTagBlocks(text, 'header')
+    text = this.stripTagBlocks(text, 'footer')
+    text = this.stripTagBlocks(text, 'aside')
 
     text = text.replace(/<h1[^>]*>/gi, '\n# ')
     text = text.replace(/<h2[^>]*>/gi, '\n## ')
@@ -82,12 +113,7 @@ export class UrlIngestor {
     text = text.replace(/<br\s*\/?>/gi, '\n')
     text = text.replace(/<[^>]+>/g, '')
 
-    text = text.replace(/&amp;/g, '&')
-    text = text.replace(/&lt;/g, '<')
-    text = text.replace(/&gt;/g, '>')
-    text = text.replace(/&quot;/g, '"')
-    text = text.replace(/&#39;/g, "'")
-
+    text = this.decodeHtmlEntities(text)
     text = text.replace(/\n{3,}/g, '\n\n')
     text = text.replace(/^\s+|\s+$/g, '')
     text = text.replace(/\n\s+\n/g, '\n\n')

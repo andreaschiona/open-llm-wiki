@@ -6,7 +6,8 @@ interface UpdateState {
   checkForUpdates: () => Promise<void>
 }
 
-const GITHUB_API = 'https://api.github.com/repos/andreaschiona/open-llm-wiki/releases/latest'
+const GITHUB_API =
+  'https://api.github.com/repos/andreaschiona/open-llm-wiki/releases/latest'
 
 async function getCurrentVersion(): Promise<string> {
   try {
@@ -61,10 +62,11 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
         throw new Error(`GitHub API error: ${response.status}`)
       }
       const data = await response.json()
-      const latestTag = (data.tag_name as string || '').replace(/^v/, '')
-      const latestUrl = data.html_url as string || ''
+      const latestTag = ((data.tag_name as string) || '').replace(/^v/, '')
+      const latestUrl = (data.html_url as string) || ''
 
-      const isNewer = latestTag && compareVersions(latestTag, currentVersion) > 0
+      const isNewer =
+        latestTag && compareVersions(latestTag, currentVersion) > 0
 
       set({
         updateInfo: {

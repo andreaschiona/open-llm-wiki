@@ -10,12 +10,30 @@ export class WikiIndex {
     let currentCategory = ''
     const lines = content.split('\n')
     for (const line of lines) {
-      const catMatch = line.match(/^##\s+(.+)/)
+      const catMatch = line.match(/^###?\s+(.+)/)
       if (catMatch) {
         currentCategory = catMatch[1].toLowerCase()
         continue
       }
-      const entryMatch = line.match(/^\s*[-*]\s+\[([^\]]+)\]\(([^)]+)\)\s*[:-]{0,1}\s*(.*)/)
+      // Parse [[wikilink|label]] syntax
+      const wikiLinkMatch = line.match(
+        /^\s*[-*]\s+\[\[([^\]]+)\|([^\]]+)\]\]\s*[:-]{0,1}\s*(.*)/,
+      )
+      if (wikiLinkMatch && currentCategory) {
+        this.entries.push({
+          title: wikiLinkMatch[2],
+          path: wikiLinkMatch[1],
+          category: currentCategory,
+          summary: wikiLinkMatch[3] || '',
+          tags: [],
+          updated: new Date().toISOString(),
+        })
+        continue
+      }
+      // Parse [title](path) syntax
+      const entryMatch = line.match(
+        /^\s*[-*]\s+\[([^\]]+)\]\(([^)]+)\)\s*[:-]{0,1}\s*(.*)/,
+      )
       if (entryMatch && currentCategory) {
         this.entries.push({
           title: entryMatch[1],
@@ -37,14 +55,14 @@ export class WikiIndex {
       byCategory.get(cat)!.push(entry)
     }
 
-    let md = `# Wiki Index\n\nLast updated: ${new Date().toISOString()}\n\n`
+    let md = `# Wiki Index\n\nUltimo aggiornamento: ${new Date().toISOString()}\n\n`
     for (const [cat, items] of byCategory) {
       md += `## ${cat.charAt(0).toUpperCase() + cat.slice(1)}\n\n`
       if (items.length === 0) {
-        md += '*No entries yet*\n\n'
+        md += '*Nessun articolo ancora*\n\n'
       } else {
         for (const item of items) {
-          md += `- [${item.title}](${item.path})${item.summary ? `: ${item.summary}` : ''}\n`
+          md += `- [[${item.path}|${item.title}]]${item.summary ? `: ${item.summary}` : ''}\n`
         }
         md += '\n'
       }
@@ -53,7 +71,7 @@ export class WikiIndex {
   }
 
   addEntry(entry: WikiIndexEntry): void {
-    const idx = this.entries.findIndex(e => e.path === entry.path)
+    const idx = this.entries.findIndex((e) => e.path === entry.path)
     if (idx >= 0) {
       this.entries[idx] = entry
     } else {
@@ -62,7 +80,7 @@ export class WikiIndex {
   }
 
   removeEntry(path: string): void {
-    this.entries = this.entries.filter(e => e.path !== path)
+    this.entries = this.entries.filter((e) => e.path !== path)
   }
 
   getEntries(): WikiIndexEntry[] {
@@ -70,10 +88,11 @@ export class WikiIndex {
   }
 
   search(term: string): WikiIndexEntry[] {
-    return this.entries.filter(e =>
-      e.title.toLowerCase().includes(term.toLowerCase()) ||
-      e.summary.toLowerCase().includes(term.toLowerCase()) ||
-      e.tags.some(t => t.toLowerCase().includes(term.toLowerCase()))
+    return this.entries.filter(
+      (e) =>
+        e.title.toLowerCase().includes(term.toLowerCase()) ||
+        e.summary.toLowerCase().includes(term.toLowerCase()) ||
+        e.tags.some((t) => t.toLowerCase().includes(term.toLowerCase())),
     )
   }
 }

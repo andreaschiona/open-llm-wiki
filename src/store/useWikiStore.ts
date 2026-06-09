@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { WikiManager } from '../lib/wiki/wikiManager'
+import { WikiManager, type FileOps } from '../lib/wiki/wikiManager'
 import { WikiIndex } from '../lib/wiki/wikiIndex'
 import type { WikiPage, WikiTreeNode, WikiIndexEntry } from '../types'
 
@@ -13,7 +13,7 @@ interface WikiState {
   logContent: string
   searchResults: WikiIndexEntry[]
   initialized: boolean
-  init: (fileOps: any) => Promise<void>
+  init: (fileOps: FileOps) => Promise<void>
   navigateToPage: (path: string) => Promise<void>
   refreshTree: () => Promise<void>
   refreshIndex: () => Promise<void>
@@ -60,9 +60,20 @@ export const useWikiStore = create<WikiState>((set, get) => ({
     }
     try {
       const content = await wm.readFile(path)
-      const title = path.split('/').pop()?.replace(/\.[^.]+$/, '') || path
+      const title =
+        path
+          .split('/')
+          .pop()
+          ?.replace(/\.[^.]+$/, '') || path
       const rawPage: WikiPage = {
-        meta: { title, path, category: 'page', created: '', updated: '', tags: [] },
+        meta: {
+          title,
+          path,
+          category: 'page',
+          created: '',
+          updated: '',
+          tags: [],
+        },
         content: `# ${title}\n\n\`\`\`\n${content.slice(0, 10000)}\n\`\`\``,
       }
       set({ currentPage: rawPage, currentPath: path })

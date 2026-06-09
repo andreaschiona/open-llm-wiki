@@ -10,8 +10,15 @@ export class OllamaProvider implements LLMProvider {
   private baseUrl: string
   private defaultModel: string
 
-  constructor(config: { baseUrl: string; apiKey?: string; defaultModel: string }) {
-    this.baseUrl = (config.baseUrl || 'http://localhost:11434').replace(/\/+$/, '')
+  constructor(config: {
+    baseUrl: string
+    apiKey?: string
+    defaultModel: string
+  }) {
+    this.baseUrl = (config.baseUrl || 'http://localhost:11434').replace(
+      /\/+$/,
+      '',
+    )
     this.defaultModel = config.defaultModel || 'llama3.2'
   }
 
@@ -26,7 +33,7 @@ export class OllamaProvider implements LLMProvider {
   async chat(request: ChatRequest): Promise<ChatResponse> {
     const body = {
       model: request.model || this.defaultModel,
-      messages: request.messages.map(m => ({
+      messages: request.messages.map((m) => ({
         role: m.role,
         content: m.content,
       })),
@@ -49,11 +56,11 @@ export class OllamaProvider implements LLMProvider {
 
   async streamChat(
     request: ChatRequest,
-    onChunk: (chunk: string) => void
+    onChunk: (chunk: string) => void,
   ): Promise<ChatResponse> {
     const body = {
       model: request.model || this.defaultModel,
-      messages: request.messages.map(m => ({
+      messages: request.messages.map((m) => ({
         role: m.role,
         content: m.content,
       })),
@@ -103,7 +110,9 @@ export class OllamaProvider implements LLMProvider {
         provider: this.id,
       }))
     } catch {
-      return [{ id: this.defaultModel, name: this.defaultModel, provider: this.id }]
+      return [
+        { id: this.defaultModel, name: this.defaultModel, provider: this.id },
+      ]
     }
   }
 

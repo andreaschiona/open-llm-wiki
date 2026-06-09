@@ -1,7 +1,7 @@
 export interface PageMeta {
   title: string
   path: string
-  category: 'entity' | 'concept' | 'summary' | 'query' | 'page'
+  category: string
   created: string
   updated: string
   tags: string[]

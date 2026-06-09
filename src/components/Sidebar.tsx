@@ -14,7 +14,7 @@ const navItems: { view: AppView; label: string; icon: string }[] = [
 ]
 
 export function Sidebar({ activeView, onNavigate }: SidebarProps) {
-  const updateStatus = useUpdateStore(s => s.updateInfo.status)
+  const updateStatus = useUpdateStore((s) => s.updateInfo.status)
 
   return (
     <aside className="sidebar">
@@ -23,7 +23,7 @@ export function Sidebar({ activeView, onNavigate }: SidebarProps) {
         <h1 className="sidebar-title">LLM Wiki</h1>
       </div>
       <nav className="sidebar-nav">
-        {navItems.map(item => (
+        {navItems.map((item) => (
           <button
             key={item.view}
             className={`sidebar-item ${activeView === item.view ? 'active' : ''}`}

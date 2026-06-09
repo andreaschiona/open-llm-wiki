@@ -12,7 +12,12 @@ class Logger {
   private entries: LogEntry[] = []
   private maxEntries = 1000
 
-  private log(level: LogLevel, module: string, message: string, data?: unknown) {
+  private log(
+    level: LogLevel,
+    module: string,
+    message: string,
+    data?: unknown,
+  ) {
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
       level,
@@ -37,13 +42,25 @@ class Logger {
     }
   }
 
-  info(module: string, message: string, data?: unknown) { this.log('info', module, message, data) }
-  warn(module: string, message: string, data?: unknown) { this.log('warn', module, message, data) }
-  error(module: string, message: string, data?: unknown) { this.log('error', module, message, data) }
-  debug(module: string, message: string, data?: unknown) { this.log('debug', module, message, data) }
+  info(module: string, message: string, data?: unknown) {
+    this.log('info', module, message, data)
+  }
+  warn(module: string, message: string, data?: unknown) {
+    this.log('warn', module, message, data)
+  }
+  error(module: string, message: string, data?: unknown) {
+    this.log('error', module, message, data)
+  }
+  debug(module: string, message: string, data?: unknown) {
+    this.log('debug', module, message, data)
+  }
 
-  getEntries(): LogEntry[] { return [...this.entries] }
-  getRecent(count = 50): LogEntry[] { return this.entries.slice(-count) }
+  getEntries(): LogEntry[] {
+    return [...this.entries]
+  }
+  getRecent(count = 50): LogEntry[] {
+    return this.entries.slice(-count)
+  }
 }
 
 export const logger = new Logger()

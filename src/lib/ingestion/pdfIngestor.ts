@@ -24,10 +24,16 @@ export class PdfIngestor {
     }
   }
 
-  async ingestFromBuffer(buffer: ArrayBuffer, fileName: string): Promise<PdfIngestResult> {
+  async ingestFromBuffer(
+    buffer: ArrayBuffer,
+    fileName: string,
+  ): Promise<PdfIngestResult> {
     const text = await this.extractText(buffer)
     const title = fileName.replace('.pdf', '')
-    logger.info('PdfIngestor', `Processed PDF: ${fileName} (${text.length} chars)`)
+    logger.info(
+      'PdfIngestor',
+      `Processed PDF: ${fileName} (${text.length} chars)`,
+    )
     return {
       title,
       content: text,
@@ -45,7 +51,9 @@ export class PdfIngestor {
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i)
         const content = await page.getTextContent()
-        const pageText = content.items.map((item) => ('str' in item ? item.str || '' : '')).join(' ')
+        const pageText = content.items
+          .map((item) => ('str' in item ? item.str || '' : ''))
+          .join(' ')
         text += `\n\n--- Page ${i} ---\n\n${pageText}`
       }
       return text.trim()

@@ -26,7 +26,9 @@ export function createProvider(config: LLMProviderConfig): LLMProvider {
       })
     case 'gemini':
       return new OpenAIProvider({
-        baseUrl: config.baseUrl || 'https://generativelanguage.googleapis.com/v1beta/openai',
+        baseUrl:
+          config.baseUrl ||
+          'https://generativelanguage.googleapis.com/v1beta/openai',
         apiKey: config.apiKey,
         defaultModel: config.defaultModel || 'gemini-2.0-flash',
       })

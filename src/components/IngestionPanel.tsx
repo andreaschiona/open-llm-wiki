@@ -12,7 +12,8 @@ import type { IngestionTask } from '../types'
 export function IngestionPanel() {
   const [urlInput, setUrlInput] = useState('')
   const [fileInput, setFileInput] = useState<File | null>(null)
-  const { ingestionTasks, addIngestionTask, updateIngestionTask } = useChatStore()
+  const { ingestionTasks, addIngestionTask, updateIngestionTask } =
+    useChatStore()
   const { wikiManager } = useWikiStore()
   const { getActiveProvider } = useConfigStore()
 
@@ -45,15 +46,27 @@ export function IngestionPanel() {
     addIngestionTask(task)
 
     try {
-      updateIngestionTask(task.id, { status: 'downloading', progress: 10, progressLabel: 'Downloading URL...' })
+      updateIngestionTask(task.id, {
+        status: 'downloading',
+        progress: 10,
+        progressLabel: 'Downloading URL...',
+      })
       const ingestor = new UrlIngestor()
       const result = await ingestor.ingest(urlInput)
 
-      updateIngestionTask(task.id, { progress: 25, progressLabel: 'Downloaded, starting analysis...' })
+      updateIngestionTask(task.id, {
+        progress: 25,
+        progressLabel: 'Downloaded, starting analysis...',
+      })
 
       const pipeline = createPipeline()
       if (pipeline) {
-        await pipeline.processRawSource(task.id, result.title, result.content, urlInput)
+        await pipeline.processRawSource(
+          task.id,
+          result.title,
+          result.content,
+          urlInput,
+        )
       }
 
       setUrlInput('')
@@ -85,16 +98,28 @@ export function IngestionPanel() {
     addIngestionTask(task)
 
     try {
-      updateIngestionTask(task.id, { status: 'downloading', progress: 10, progressLabel: 'Reading file...' })
+      updateIngestionTask(task.id, {
+        status: 'downloading',
+        progress: 10,
+        progressLabel: 'Reading file...',
+      })
       const buffer = await fileInput.arrayBuffer()
       const ingestor = new PdfIngestor()
       const result = await ingestor.ingestFromBuffer(buffer, fileInput.name)
 
-      updateIngestionTask(task.id, { progress: 25, progressLabel: 'File read, starting analysis...' })
+      updateIngestionTask(task.id, {
+        progress: 25,
+        progressLabel: 'File read, starting analysis...',
+      })
 
       const pipeline = createPipeline()
       if (pipeline) {
-        await pipeline.processRawSource(task.id, result.title, result.content, fileInput.name)
+        await pipeline.processRawSource(
+          task.id,
+          result.title,
+          result.content,
+          fileInput.name,
+        )
       }
 
       setFileInput(null)
@@ -114,7 +139,9 @@ export function IngestionPanel() {
   return (
     <div className="ingestion-panel">
       <h2>Content Ingestion</h2>
-      <p className="ingestion-subtitle">Add content to your wiki from URLs or files.</p>
+      <p className="ingestion-subtitle">
+        Add content to your wiki from URLs or files.
+      </p>
 
       <div className="ingestion-section">
         <h3>Import from URL</h3>
@@ -123,10 +150,14 @@ export function IngestionPanel() {
             type="url"
             className="input-field"
             value={urlInput}
-            onChange={e => setUrlInput(e.target.value)}
+            onChange={(e) => setUrlInput(e.target.value)}
             placeholder="https://example.com/article"
           />
-          <button className="btn" onClick={handleUrlIngest} disabled={!urlInput.trim()}>
+          <button
+            className="btn"
+            onClick={handleUrlIngest}
+            disabled={!urlInput.trim()}
+          >
             Ingest URL
           </button>
         </div>
@@ -138,10 +169,14 @@ export function IngestionPanel() {
           <input
             type="file"
             accept=".pdf,.txt,.md"
-            onChange={e => setFileInput(e.target.files?.[0] || null)}
+            onChange={(e) => setFileInput(e.target.files?.[0] || null)}
             className="file-input"
           />
-          <button className="btn" onClick={handleFileIngest} disabled={!fileInput}>
+          <button
+            className="btn"
+            onClick={handleFileIngest}
+            disabled={!fileInput}
+          >
             Ingest File
           </button>
         </div>
@@ -150,11 +185,13 @@ export function IngestionPanel() {
       {ingestionTasks.length > 0 && (
         <div className="ingestion-tasks">
           <h3>Recent Tasks</h3>
-          {ingestionTasks.map(task => (
+          {ingestionTasks.map((task) => (
             <div key={task.id} className={`ingestion-task ${task.status}`}>
               <div className="task-header">
                 <span className="task-source">{task.source}</span>
-                <span className={`task-status ${task.status}`}>{task.status}</span>
+                <span className={`task-status ${task.status}`}>
+                  {task.status}
+                </span>
               </div>
               <div className="task-progress">
                 <div
@@ -163,7 +200,9 @@ export function IngestionPanel() {
                 />
               </div>
               <div className="task-label">{task.progressLabel}</div>
-              {task.error && <div className="task-error">Error: {task.error}</div>}
+              {task.error && (
+                <div className="task-error">Error: {task.error}</div>
+              )}
             </div>
           ))}
         </div>

@@ -26,7 +26,7 @@ export interface LLMProvider {
   chat(request: ChatRequest): Promise<ChatResponse>
   streamChat(
     request: ChatRequest,
-    onChunk: (chunk: string) => void
+    onChunk: (chunk: string) => void,
   ): Promise<ChatResponse>
   listModels(): Promise<LLMModel[]>
   testConnection(): Promise<boolean>
