@@ -16,7 +16,9 @@ export class WikiIndex {
         continue
       }
       // Parse [[wikilink|label]] syntax
-      const wikiLinkMatch = line.match(/^\s*[-*]\s+\[\[([^\]]+)\|([^\]]+)\]\]\s*[:-]{0,1}\s*(.*)/)
+      const wikiLinkMatch = line.match(
+        /^\s*[-*]\s+\[\[([^\]]+)\|([^\]]+)\]\]\s*[:-]{0,1}\s*(.*)/,
+      )
       if (wikiLinkMatch && currentCategory) {
         this.entries.push({
           title: wikiLinkMatch[2],
@@ -29,7 +31,9 @@ export class WikiIndex {
         continue
       }
       // Parse [title](path) syntax
-      const entryMatch = line.match(/^\s*[-*]\s+\[([^\]]+)\]\(([^)]+)\)\s*[:-]{0,1}\s*(.*)/)
+      const entryMatch = line.match(
+        /^\s*[-*]\s+\[([^\]]+)\]\(([^)]+)\)\s*[:-]{0,1}\s*(.*)/,
+      )
       if (entryMatch && currentCategory) {
         this.entries.push({
           title: entryMatch[1],
@@ -67,7 +71,7 @@ export class WikiIndex {
   }
 
   addEntry(entry: WikiIndexEntry): void {
-    const idx = this.entries.findIndex(e => e.path === entry.path)
+    const idx = this.entries.findIndex((e) => e.path === entry.path)
     if (idx >= 0) {
       this.entries[idx] = entry
     } else {
@@ -76,7 +80,7 @@ export class WikiIndex {
   }
 
   removeEntry(path: string): void {
-    this.entries = this.entries.filter(e => e.path !== path)
+    this.entries = this.entries.filter((e) => e.path !== path)
   }
 
   getEntries(): WikiIndexEntry[] {
@@ -84,10 +88,11 @@ export class WikiIndex {
   }
 
   search(term: string): WikiIndexEntry[] {
-    return this.entries.filter(e =>
-      e.title.toLowerCase().includes(term.toLowerCase()) ||
-      e.summary.toLowerCase().includes(term.toLowerCase()) ||
-      e.tags.some(t => t.toLowerCase().includes(term.toLowerCase()))
+    return this.entries.filter(
+      (e) =>
+        e.title.toLowerCase().includes(term.toLowerCase()) ||
+        e.summary.toLowerCase().includes(term.toLowerCase()) ||
+        e.tags.some((t) => t.toLowerCase().includes(term.toLowerCase())),
     )
   }
 }

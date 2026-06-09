@@ -292,7 +292,18 @@ Rules:
     const sourceLower = source.toLowerCase()
     const allTags = tags.map((t) => t.toLowerCase())
     if (
-      allTags.some((t) => ['tool', 'strumento', 'framework', 'platform', 'ide', 'cli', 'libreria', 'software'].includes(t)) ||
+      allTags.some((t) =>
+        [
+          'tool',
+          'strumento',
+          'framework',
+          'platform',
+          'ide',
+          'cli',
+          'libreria',
+          'software',
+        ].includes(t),
+      ) ||
       sourceLower.includes('github.com') ||
       sourceLower.includes('tool') ||
       sourceLower.includes('api')
@@ -300,7 +311,17 @@ Rules:
       return 'strumenti-ai'
     }
     if (
-      allTags.some((t) => ['news', 'notizia', 'release', 'announcement', 'update', 'model', 'benchmark'].includes(t))
+      allTags.some((t) =>
+        [
+          'news',
+          'notizia',
+          'release',
+          'announcement',
+          'update',
+          'model',
+          'benchmark',
+        ].includes(t),
+      )
     ) {
       return 'ai-news'
     }

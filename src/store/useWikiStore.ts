@@ -60,9 +60,20 @@ export const useWikiStore = create<WikiState>((set, get) => ({
     }
     try {
       const content = await wm.readFile(path)
-      const title = path.split('/').pop()?.replace(/\.[^.]+$/, '') || path
+      const title =
+        path
+          .split('/')
+          .pop()
+          ?.replace(/\.[^.]+$/, '') || path
       const rawPage: WikiPage = {
-        meta: { title, path, category: 'page', created: '', updated: '', tags: [] },
+        meta: {
+          title,
+          path,
+          category: 'page',
+          created: '',
+          updated: '',
+          tags: [],
+        },
         content: `# ${title}\n\n\`\`\`\n${content.slice(0, 10000)}\n\`\`\``,
       }
       set({ currentPage: rawPage, currentPath: path })

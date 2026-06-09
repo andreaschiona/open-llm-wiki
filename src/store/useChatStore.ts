@@ -36,15 +36,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   updateIngestionTask: (id, updates) => {
     set({
-      ingestionTasks: get().ingestionTasks.map(t =>
-        t.id === id ? { ...t, ...updates } : t
+      ingestionTasks: get().ingestionTasks.map((t) =>
+        t.id === id ? { ...t, ...updates } : t,
       ),
     })
   },
 
   removeIngestionTask: (id) => {
     set({
-      ingestionTasks: get().ingestionTasks.filter(t => t.id !== id),
+      ingestionTasks: get().ingestionTasks.filter((t) => t.id !== id),
     })
   },
 }))

@@ -4,4 +4,4 @@ Notizie, aggiornamenti e sviluppi nel mondo dell'intelligenza artificiale. Inclu
 
 ## Articoli
 
-*Nessun articolo ancora. Usa `ingest` per aggiungere nuove fonti.*
+_Nessun articolo ancora. Usa `ingest` per aggiungere nuove fonti._

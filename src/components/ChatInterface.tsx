@@ -6,7 +6,8 @@ import { createProvider } from '../lib/llm/providerFactory'
 import { MarkdownRenderer } from './MarkdownRenderer'
 
 export function ChatInterface() {
-  const { messages, isStreaming, addMessage, clearMessages, setIsStreaming } = useChatStore()
+  const { messages, isStreaming, addMessage, clearMessages, setIsStreaming } =
+    useChatStore()
   const { wikiIndex, wikiManager } = useWikiStore()
   const { getActiveProvider } = useConfigStore()
   const [input, setInput] = useState('')
@@ -42,7 +43,8 @@ export function ChatInterface() {
     if (!activeConfig) {
       addMessage({
         role: 'assistant',
-        content: 'No LLM provider configured. Go to Settings to set up a provider.',
+        content:
+          'No LLM provider configured. Go to Settings to set up a provider.',
         timestamp: new Date().toISOString(),
       })
       return
@@ -78,7 +80,10 @@ ${wikiContext || 'No relevant wiki pages found.'}`
         {
           messages: [
             { role: 'system', content: systemPrompt },
-            ...messages.slice(-10).map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+            ...messages.slice(-10).map((m) => ({
+              role: m.role as 'user' | 'assistant',
+              content: m.content,
+            })),
             { role: 'user', content: userMsg },
           ],
           stream: true,
@@ -122,13 +127,18 @@ ${wikiContext || 'No relevant wiki pages found.'}`
     <div className="chat-interface">
       <div className="chat-header">
         <h2>Chat with Wiki</h2>
-        <button className="btn-small" onClick={clearMessages}>Clear</button>
+        <button className="btn-small" onClick={clearMessages}>
+          Clear
+        </button>
       </div>
       <div className="chat-messages">
         {messages.length === 0 && (
           <div className="chat-empty">
             <p>Ask questions about your wiki content.</p>
-            <p>The assistant will search the wiki for relevant context and cite its sources.</p>
+            <p>
+              The assistant will search the wiki for relevant context and cite
+              its sources.
+            </p>
           </div>
         )}
         {messages.map((msg, i) => (
@@ -154,7 +164,7 @@ ${wikiContext || 'No relevant wiki pages found.'}`
         <textarea
           className="chat-input"
           value={input}
-          onChange={e => setInput(e.target.value)}
+          onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Ask a question about your wiki..."
           rows={2}

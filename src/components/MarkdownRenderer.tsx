@@ -7,10 +7,13 @@ interface MarkdownRendererProps {
 }
 
 export function MarkdownRenderer({ content }: MarkdownRendererProps) {
-  const navigateToPage = useWikiStore(s => s.navigateToPage)
+  const navigateToPage = useWikiStore((s) => s.navigateToPage)
 
   const handleWikiLink = async (pageName: string) => {
-    const slug = pageName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    const slug = pageName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
     const wm = useWikiStore.getState().wikiManager
     if (!wm) return
     // Try direct path first (wiki/[wiki]/[article].md)
@@ -40,36 +43,51 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
           <a
             href="#"
             className="wikilink"
-            onClick={(e) => { e.preventDefault(); handleWikiLink(pageName) }}
+            onClick={(e) => {
+              e.preventDefault()
+              handleWikiLink(pageName)
+            }}
           >
             {pageName}
           </a>
         )
       }
-      if (href && !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('mailto:')) {
+      if (
+        href &&
+        !href.startsWith('http://') &&
+        !href.startsWith('https://') &&
+        !href.startsWith('mailto:')
+      ) {
         return (
           <a
             href="#"
-            onClick={(e) => { e.preventDefault(); navigateToPage(href) }}
+            onClick={(e) => {
+              e.preventDefault()
+              navigateToPage(href)
+            }}
           >
             {children}
           </a>
         )
       }
-      return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
+      return (
+        <a href={href} target="_blank" rel="noopener noreferrer">
+          {children}
+        </a>
+      )
     },
   }
 
-  const processedContent = content.replace(/\[\[([^\]]+)\]\]/g, (_: string, name: string) => {
-    return `[${name}]([[${name}]])`
-  })
+  const processedContent = content.replace(
+    /\[\[([^\]]+)\]\]/g,
+    (_: string, name: string) => {
+      return `[${name}]([[${name}]])`
+    },
+  )
 
   return (
     <div className="markdown-body">
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        components={components}
-      >
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
         {processedContent}
       </ReactMarkdown>
     </div>

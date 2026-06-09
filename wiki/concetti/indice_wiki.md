@@ -4,4 +4,4 @@ Concetti fondamentali, architetture, pattern e terminologia dell'AI. Include RAG
 
 ## Articoli
 
-*Nessun articolo ancora. Usa `ingest` per aggiungere nuove fonti.*
+_Nessun articolo ancora. Usa `ingest` per aggiungere nuove fonti._

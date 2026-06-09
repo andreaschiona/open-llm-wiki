@@ -1,6 +1,6 @@
 export async function readStream(
   reader: ReadableStreamDefaultReader<Uint8Array>,
-  onLine: (line: string) => boolean | void
+  onLine: (line: string) => boolean | void,
 ): Promise<void> {
   const decoder = new TextDecoder()
   let buffer = ''
@@ -19,7 +19,9 @@ export async function readStream(
   }
 }
 
-export function getReader(res: Response): ReadableStreamDefaultReader<Uint8Array> {
+export function getReader(
+  res: Response,
+): ReadableStreamDefaultReader<Uint8Array> {
   const reader = res.body?.getReader()
   if (!reader) throw new Error('No response body')
   return reader

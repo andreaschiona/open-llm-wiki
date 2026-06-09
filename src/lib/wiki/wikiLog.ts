@@ -7,7 +7,9 @@ export class WikiLog {
     this.entries = []
     const lines = content.split('\n')
     for (const line of lines) {
-      const match = line.match(/^\s*[-*]\s+\*\*(\d{4}-\d{2}-\d{2}T[\d:.]+Z?)\*\*\s*\|\s*(\w+)\s*\|\s*(.+?)\s*[—–-]\s*(.+)/)
+      const match = line.match(
+        /^\s*[-*]\s+\*\*(\d{4}-\d{2}-\d{2}T[\d:.]+Z?)\*\*\s*\|\s*(\w+)\s*\|\s*(.+?)\s*[—–-]\s*(.+)/,
+      )
       if (match) {
         this.entries.push({
           timestamp: match[1],

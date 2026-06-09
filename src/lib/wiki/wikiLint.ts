@@ -85,7 +85,10 @@ export class WikiLint {
         }
         for (const theme of wikiThemes) {
           const themePath = `${theme}/${targetSlug}`
-          if (existingPaths.has(themePath) || existingPaths.has(themePath + '.md')) {
+          if (
+            existingPaths.has(themePath) ||
+            existingPaths.has(themePath + '.md')
+          ) {
             found = true
             break
           }

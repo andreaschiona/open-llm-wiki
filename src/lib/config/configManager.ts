@@ -78,11 +78,11 @@ export class ConfigManager {
   }
 
   getActiveProvider(): LLMProviderConfig | undefined {
-    return this.providers.find(p => p.id === this.activeProviderId)
+    return this.providers.find((p) => p.id === this.activeProviderId)
   }
 
   getProvider(id: string): LLMProviderConfig | undefined {
-    return this.providers.find(p => p.id === id)
+    return this.providers.find((p) => p.id === id)
   }
 
   async addProvider(provider: LLMProviderConfig): Promise<void> {
@@ -93,15 +93,18 @@ export class ConfigManager {
     await this.save()
   }
 
-  async updateProvider(id: string, updates: Partial<LLMProviderConfig>): Promise<void> {
-    const idx = this.providers.findIndex(p => p.id === id)
+  async updateProvider(
+    id: string,
+    updates: Partial<LLMProviderConfig>,
+  ): Promise<void> {
+    const idx = this.providers.findIndex((p) => p.id === id)
     if (idx < 0) throw new Error(`Provider ${id} not found`)
     this.providers[idx] = { ...this.providers[idx], ...updates }
     await this.save()
   }
 
   async removeProvider(id: string): Promise<void> {
-    this.providers = this.providers.filter(p => p.id !== id)
+    this.providers = this.providers.filter((p) => p.id !== id)
     if (this.activeProviderId === id) {
       this.activeProviderId = this.providers[0]?.id || null
     }
@@ -109,7 +112,7 @@ export class ConfigManager {
   }
 
   async setActiveProvider(id: string): Promise<void> {
-    if (!this.providers.find(p => p.id === id)) {
+    if (!this.providers.find((p) => p.id === id)) {
       throw new Error(`Provider ${id} not found`)
     }
     this.activeProviderId = id

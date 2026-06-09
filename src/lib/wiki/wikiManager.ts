@@ -91,10 +91,14 @@ export class WikiManager {
   }
 
   private generateInitialIndex(): string {
-    const wikis = this.thematicWikis.map((w) => {
-      const label = w.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-      return `### [[${w}/indice_wiki|${label}]]\nDescrizione della wiki tematica ${label}.`
-    }).join('\n\n')
+    const wikis = this.thematicWikis
+      .map((w) => {
+        const label = w
+          .replace(/-/g, ' ')
+          .replace(/\b\w/g, (c) => c.toUpperCase())
+        return `### [[${w}/indice_wiki|${label}]]\nDescrizione della wiki tematica ${label}.`
+      })
+      .join('\n\n')
     return `# Wiki Index
 
 Ultimo aggiornamento: ${new Date().toISOString()}
@@ -203,19 +207,21 @@ ${wikis}
       children: [],
     }
     const wikis = await this.listThematicWikis()
-    wikiNode.children = await Promise.all(wikis.map(async (w) => {
-      const files = await this.listWikiFiles(w)
-      return {
-        name: w,
-        path: `wiki/${w}`,
-        type: 'directory' as const,
-        children: files.map((f) => ({
-          name: f,
-          path: `wiki/${w}/${f}`,
-          type: 'file' as const,
-        })),
-      }
-    }))
+    wikiNode.children = await Promise.all(
+      wikis.map(async (w) => {
+        const files = await this.listWikiFiles(w)
+        return {
+          name: w,
+          path: `wiki/${w}`,
+          type: 'directory' as const,
+          children: files.map((f) => ({
+            name: f,
+            path: `wiki/${w}/${f}`,
+            type: 'file' as const,
+          })),
+        }
+      }),
+    )
     // Add indice.md and log.md at wiki root
     wikiNode.children.push({
       name: 'indice.md',

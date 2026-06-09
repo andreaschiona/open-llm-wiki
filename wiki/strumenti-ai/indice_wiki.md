@@ -4,4 +4,4 @@ Tool, framework, piattaforme e servizi AI. Include IDE, CLI, librerie e piattafo
 
 ## Articoli
 
-*Nessun articolo ancora. Usa `ingest` per aggiungere nuove fonti.*
+_Nessun articolo ancora. Usa `ingest` per aggiungere nuove fonti._
