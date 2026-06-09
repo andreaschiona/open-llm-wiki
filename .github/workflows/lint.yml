@@ -32,3 +32,5 @@ jobs:
           VALIDATE_XML: false
           VALIDATE_PROPERTIES: false
           VALIDATE_TYPESCRIPT_STANDARD: false
+          VALIDATE_CHECKOV: false
+          JSCPD_CONFIG_FILE: .jscpd.json

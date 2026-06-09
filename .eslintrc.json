@@ -10,10 +10,17 @@
   },
   "env": {
     "browser": true,
-    "es2022": true
+    "es2022": true,
+    "node": true
+  },
+  "settings": {
+    "n": {
+      "allowModules": true
+    }
   },
   "rules": {
     "n/no-missing-import": "off",
-    "n/no-unsupported-features/es-syntax": "off"
+    "n/no-unsupported-features/es-syntax": "off",
+    "n/no-unsupported-features/node-builtins": "off"
   }
 }
