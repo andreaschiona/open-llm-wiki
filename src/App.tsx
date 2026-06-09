@@ -14,7 +14,9 @@ import './components/Sidebar.css'
 const memStore = new Map<string, string>()
 const memDirs = new Set<string>([
   'wiki',
-  'wiki/pages',
+  'wiki/ai-news',
+  'wiki/strumenti-ai',
+  'wiki/concetti',
   'raw',
   'raw/pdfs',
   'raw/meetings',

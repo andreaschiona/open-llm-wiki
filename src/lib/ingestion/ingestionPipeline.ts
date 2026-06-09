@@ -89,62 +89,52 @@ export class IngestionPipeline {
       this.emit(taskId, 'writing', 60, 'Writing wiki pages...')
 
       const safeName = this.sanitizeFilename(title)
-      const pagePath = `pages/${safeName}.md`
+      const targetWiki = this.detectTargetWiki(source, analysis.tags)
+      const pagePath = `${targetWiki}/${safeName}.md`
       const today = new Date().toISOString().split('T')[0]
       const pageContent = `---
-type: summary
-title: ${title}
-created: ${today}
-updated: ${today}
-source: ${source}
-tags: [${analysis.tags.length > 0 ? analysis.tags.map((t) => `"${t}"`).join(', ') : 'ingested, summary'}]
+tags: [${analysis.tags.length > 0 ? analysis.tags.map((t) => `"${t}"`).join(', ') : 'ingested'}]
+data_creazione: ${today}
+data_aggiornamento: ${today}
+fonti:
+  - raw/${rawCategory}/${rawFilename}
 ---
 
 # ${title}
 
-> Source: \`raw/${rawCategory}/${rawFilename}\`
-
 ${analysis.summary}
 
-## Concepts
+## Articoli correlati
 
 ${
   newConcepts.length > 0
-    ? newConcepts.map((c) => `- [[${c.name}]] — ${c.description}`).join('\n')
-    : '*No new concepts extracted*'
+    ? newConcepts.map((c) => `- [[${c.name}]]`).join('\n')
+    : ''
 }
-
-## Related Pages
-
 ${
   analysis.relatedPages.length > 0
     ? analysis.relatedPages.map((r: string) => `- [[${r}]]`).join('\n')
-    : '*None yet*'
+    : ''
 }
 
-## Cross-References
+## Fonti
 
-<!-- Wikilinks to related entities and concepts will be added here -->
-
----
-
-*Imported: ${new Date().toISOString()}*
+- \`raw/${rawCategory}/${rawFilename}\`
 `
       await this.wikiManager.writePage(pagePath, pageContent)
 
       const createdPaths = [pagePath]
       for (const concept of newConcepts) {
         const slug = this.sanitizeFilename(concept.name)
-        const conceptPath = `pages/${slug}.md`
+        const conceptPath = `concetti/${slug}.md`
         const existingConcept = await this.wikiManager.readPage(conceptPath)
         if (!existingConcept) {
           const conceptContent = `---
-type: concept
-title: ${concept.name}
-created: ${new Date().toISOString().split('T')[0]}
-updated: ${new Date().toISOString().split('T')[0]}
-source: ${source}
 tags: [concept, extracted]
+data_creazione: ${today}
+data_aggiornamento: ${today}
+fonti:
+  - raw/${rawCategory}/${rawFilename}
 ---
 
 # ${concept.name}
@@ -153,17 +143,10 @@ tags: [concept, extracted]
 
 ${concept.description}
 
-## Source References
+## Fonti
 
-- Extracted from: [[${title}]]
-
-## Cross-References
-
-<!-- Wikilinks to related pages will be added here -->
-
----
-
-*Imported: ${new Date().toISOString()}*
+- \`raw/${rawCategory}/${rawFilename}\`
+- [[${title}]]
 `
           await this.wikiManager.writePage(conceptPath, conceptContent)
           createdPaths.push(conceptPath)
@@ -179,7 +162,7 @@ ${concept.description}
       wikiIndex.addEntry({
         title,
         path: pagePath,
-        category: 'pages',
+        category: targetWiki,
         summary: analysis.summary.slice(0, 100) + '...',
         tags: analysis.tags || [],
         updated: new Date().toISOString(),
@@ -188,8 +171,8 @@ ${concept.description}
         const slug = this.sanitizeFilename(concept.name)
         wikiIndex.addEntry({
           title: concept.name,
-          path: `pages/${slug}.md`,
-          category: 'pages',
+          path: `concetti/${slug}.md`,
+          category: 'concetti',
           summary: concept.description.slice(0, 100) + '...',
           tags: [],
           updated: new Date().toISOString(),
@@ -303,6 +286,25 @@ Rules:
         tags: [],
       }
     }
+  }
+
+  private detectTargetWiki(source: string, tags: string[]): string {
+    const sourceLower = source.toLowerCase()
+    const allTags = tags.map((t) => t.toLowerCase())
+    if (
+      allTags.some((t) => ['tool', 'strumento', 'framework', 'platform', 'ide', 'cli', 'libreria', 'software'].includes(t)) ||
+      sourceLower.includes('github.com') ||
+      sourceLower.includes('tool') ||
+      sourceLower.includes('api')
+    ) {
+      return 'strumenti-ai'
+    }
+    if (
+      allTags.some((t) => ['news', 'notizia', 'release', 'announcement', 'update', 'model', 'benchmark'].includes(t))
+    ) {
+      return 'ai-news'
+    }
+    return 'concetti'
   }
 
   private detectRawCategory(source: string): string {

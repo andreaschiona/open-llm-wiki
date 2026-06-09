@@ -50,12 +50,18 @@ export class WikiLint {
     const issues: LintIssue[] = []
     const files = await this.wikiManager.listAllWikiFiles()
     const existingPaths = new Set<string>()
+    const existingSlugs = new Map<string, string[]>()
 
     for (const f of files) {
       const clean = f.replace(/\.md$/i, '').toLowerCase()
       existingPaths.add(clean)
       existingPaths.add(f.toLowerCase())
+      const slug = f.split('/').pop()?.replace(/\.md$/i, '').toLowerCase() || ''
+      if (!existingSlugs.has(slug)) existingSlugs.set(slug, [])
+      existingSlugs.get(slug)!.push(f)
     }
+
+    const wikiThemes = await this.wikiManager.listThematicWikis()
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
@@ -71,17 +77,29 @@ export class WikiLint {
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/^-|-$/g, '')
-        const targetPath = `pages/${targetSlug}`
-        if (
-          !existingPaths.has(targetPath) &&
-          !existingPaths.has(targetPath + '.md')
-        ) {
+        // Check direct paths first, then search across thematic wikis
+        let found = false
+        const directPath = `${targetSlug}.md`
+        if (existingPaths.has(directPath.toLowerCase())) {
+          found = true
+        }
+        for (const theme of wikiThemes) {
+          const themePath = `${theme}/${targetSlug}`
+          if (existingPaths.has(themePath) || existingPaths.has(themePath + '.md')) {
+            found = true
+            break
+          }
+        }
+        if (!found && existingSlugs.has(targetSlug)) {
+          found = true
+        }
+        if (!found) {
           issues.push({
             type: 'broken-link',
             severity: 'error',
             file,
             message: `Broken wiki link: [[${target}]]`,
-            detail: `Target page "${target}" (${targetPath}.md) does not exist in wiki/pages/`,
+            detail: `Target page "${target}" (${targetSlug}.md) not found in any thematic wiki`,
           })
         }
       }
