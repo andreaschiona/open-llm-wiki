@@ -84,7 +84,17 @@ export class IngestionPipeline {
 
       const safeName = this.sanitizeFilename(title)
       const pagePath = `pages/${safeName}.md`
-      const pageContent = `# ${title}
+      const today = new Date().toISOString().split('T')[0]
+      const pageContent = `---
+type: summary
+title: ${title}
+created: ${today}
+updated: ${today}
+source: ${source}
+tags: [${analysis.tags.length > 0 ? analysis.tags.map(t => `"${t}"`).join(', ') : 'ingested, summary'}]
+---
+
+# ${title}
 
 > Source: \`raw/${rawCategory}/${rawFilename}\`
 
@@ -102,9 +112,12 @@ ${analysis.relatedPages.length > 0
     ? analysis.relatedPages.map((r: string) => `- [[${r}]]`).join('\n')
     : '*None yet*'}
 
+## Cross-References
+
+<!-- Wikilinks to related entities and concepts will be added here -->
+
 ---
 
-*Source: ${source}*
 *Imported: ${new Date().toISOString()}*
 `
       await this.wikiManager.writePage(pagePath, pageContent)
@@ -115,14 +128,32 @@ ${analysis.relatedPages.length > 0
         const conceptPath = `pages/${slug}.md`
         const existingConcept = await this.wikiManager.readPage(conceptPath)
         if (!existingConcept) {
-          const conceptContent = `# ${concept.name}
+          const conceptContent = `---
+type: concept
+title: ${concept.name}
+created: ${new Date().toISOString().split('T')[0]}
+updated: ${new Date().toISOString().split('T')[0]}
+source: ${source}
+tags: [concept, extracted]
+---
+
+# ${concept.name}
+
+## Overview
 
 ${concept.description}
 
+## Source References
+
+- Extracted from: [[${title}]]
+
+## Cross-References
+
+<!-- Wikilinks to related pages will be added here -->
+
 ---
 
-*Extracted from: [[${title}]]*
-*Created: ${new Date().toISOString()}*
+*Imported: ${new Date().toISOString()}*
 `
           await this.wikiManager.writePage(conceptPath, conceptContent)
           createdPaths.push(conceptPath)
@@ -196,23 +227,42 @@ ${concept.description}
     relatedPages: string[]
     tags: string[]
   }> {
-    const systemPrompt = `You are a Wiki analyst. Your job is to analyze a document and produce structured knowledge.
+    const systemPrompt = `You are an LLM Wiki analyst following established wiki conventions.
 
-Return a JSON object with this exact structure:
+Analyze the document and return a JSON object with this exact structure:
 {
-  "summary": "A thorough markdown summary of the document (preserve key facts, data, decisions, definitions)",
+  "summary": "A structured markdown summary (see format below)",
   "concepts": [
-    { "name": "Concept Name", "description": "1-2 sentence description" }
+    { "name": "Concept Name", "description": "3-5 sentence informative description" }
   ],
   "relatedPages": ["Related Topic 1", "Related Topic 2"],
   "tags": ["tag1", "tag2", "tag3"]
 }
 
+The summary MUST use this structure:
+
+## Overview
+2-3 paragraphs capturing what this document is about, its scope, and significance.
+
+## Key Facts
+A bullet list of specific, verifiable facts. Include dates, numbers, names, concrete claims.
+
+## Key Points
+Organized by thematic section with headings (###) and bullet points. Preserve important quotes verbatim.
+
+## Data & Statistics
+If the document contains quantitative data, extract it into a list or table.
+
+## Open Questions / Debates
+List unresolved questions, conflicting viewpoints, or areas of uncertainty.
+
 Rules:
 - Extract ALL important concepts, entities, and definitions
 - Be precise with numbers, dates, and facts
 - Concepts should be encyclopedic and reusable across pages
-- Tags should be lowercase and generic`
+- Tags should be lowercase and generic
+- CRITICAL: IGNORE PDF technical internals (FlateDecode, DeviceRGB, XObject, PDF/A, font descriptors, compression filters). Extract only the document's actual subject matter.
+- If the document is mostly PDF metadata, return summary as "This document appears to contain primarily technical PDF metadata rather than readable content." and concepts as [].`
 
     const truncated = rawContent.slice(0, 15000)
     const response = await this.llmProvider.chat({
@@ -262,10 +312,9 @@ Rules:
 
   private sanitizeFilename(name: string): string {
     return name
-      .replace(/[^a-zA-Z0-9_\-\s]/g, '')
-      .trim()
-      .replace(/\s+/g, '-')
       .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
   }
 
   private getExtension(source: string): string {
