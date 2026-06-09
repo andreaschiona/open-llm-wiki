@@ -37,14 +37,29 @@ export class UrlIngestor {
     return match ? match[1].trim() : 'Untitled'
   }
 
+  private decodeHtmlEntities(text: string): string {
+    const entities: Record<string, string> = {
+      '&amp;': '&',
+      '&lt;': '<',
+      '&gt;': '>',
+      '&quot;': '"',
+      '&#39;': "'",
+      '&nbsp;': ' ',
+      '&#x27;': "'",
+      '&#x2F;': '/',
+    }
+    const pattern = /&(?:amp|lt|gt|quot|#39|nbsp|#x27|#x2F);/g
+    return text.replace(pattern, (m) => entities[m] || m)
+  }
+
   private htmlToMarkdown(html: string): string {
     let text = html
-    text = text.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-    text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-    text = text.replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '')
-    text = text.replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '')
-    text = text.replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '')
-    text = text.replace(/<aside[^>]*>[\s\S]*?<\/aside>/gi, '')
+    text = text.replace(/<script[^>]*>[\s\S]*?<\/script\s*>/gi, '')
+    text = text.replace(/<style[^>]*>[\s\S]*?<\/style\s*>/gi, '')
+    text = text.replace(/<nav[^>]*>[\s\S]*?<\/nav\s*>/gi, '')
+    text = text.replace(/<header[^>]*>[\s\S]*?<\/header\s*>/gi, '')
+    text = text.replace(/<footer[^>]*>[\s\S]*?<\/footer\s*>/gi, '')
+    text = text.replace(/<aside[^>]*>[\s\S]*?<\/aside\s*>/gi, '')
 
     text = text.replace(/<h1[^>]*>/gi, '\n# ')
     text = text.replace(/<h2[^>]*>/gi, '\n## ')
@@ -83,12 +98,7 @@ export class UrlIngestor {
     text = text.replace(/<br\s*\/?>/gi, '\n')
     text = text.replace(/<[^>]+>/g, '')
 
-    text = text.replace(/&amp;/g, '&')
-    text = text.replace(/&lt;/g, '<')
-    text = text.replace(/&gt;/g, '>')
-    text = text.replace(/&quot;/g, '"')
-    text = text.replace(/&#39;/g, "'")
-
+    text = this.decodeHtmlEntities(text)
     text = text.replace(/\n{3,}/g, '\n\n')
     text = text.replace(/^\s+|\s+$/g, '')
     text = text.replace(/\n\s+\n/g, '\n\n')
