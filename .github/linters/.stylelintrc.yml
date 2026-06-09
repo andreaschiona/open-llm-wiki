@@ -1,0 +1,6 @@
+rules:
+  rule-empty-line-before: null
+  no-descending-specificity: null
+  color-function-alias-notation: null
+  color-function-notation: null
+  alpha-value-notation: null
