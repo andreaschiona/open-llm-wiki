@@ -123,6 +123,11 @@ body,
   padding: 8px;
 }
 
+.chat-header h2 {
+  font-size: 18px;
+  margin: 0;
+}
+
 .wiki-index-panel .markdown-body h1 {
   font-size: 16px;
   margin-bottom: 12px;
@@ -237,14 +242,17 @@ body,
   padding-bottom: 8px;
   border-bottom: 1px solid var(--border);
 }
+
 .markdown-body h2 {
   font-size: 22px;
   margin: 24px 0 12px;
 }
+
 .markdown-body h3 {
   font-size: 18px;
   margin: 20px 0 10px;
 }
+
 .markdown-body h4 {
   font-size: 16px;
   margin: 16px 0 8px;
@@ -253,11 +261,13 @@ body,
 .markdown-body p {
   margin: 8px 0;
 }
+
 .markdown-body ul,
 .markdown-body ol {
   margin: 8px 0;
   padding-left: 24px;
 }
+
 .markdown-body li {
   margin: 4px 0;
 }
@@ -266,6 +276,7 @@ body,
   color: var(--accent);
   text-decoration: none;
 }
+
 .markdown-body a:hover {
   text-decoration: underline;
 }
@@ -341,11 +352,6 @@ body,
   padding: 16px 24px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-secondary);
-}
-
-.chat-header h2 {
-  font-size: 18px;
-  margin: 0;
 }
 
 .chat-messages {
