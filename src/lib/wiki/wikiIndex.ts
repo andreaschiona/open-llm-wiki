@@ -10,9 +10,19 @@ export class WikiIndex {
     let currentCategory = ''
     const lines = content.split('\n')
     for (const line of lines) {
-      const catMatch = line.match(/^###?\s+(.+)/)
+      // Match ## or ### headings
+      const catMatch = line.match(/^#+\s+(.+)/)
       if (catMatch) {
-        currentCategory = catMatch[1].toLowerCase()
+        const raw = catMatch[1].trim()
+        // Extract label from [[path|label]] if present
+        const pipeIdx = raw.indexOf('|')
+        currentCategory =
+          pipeIdx >= 0
+            ? raw
+                .slice(pipeIdx + 1, raw.lastIndexOf(']'))
+                .trim()
+                .toLowerCase()
+            : raw.toLowerCase()
         continue
       }
       // Parse [[wikilink|label]] syntax
@@ -55,9 +65,12 @@ export class WikiIndex {
       byCategory.get(cat)!.push(entry)
     }
 
-    let md = `# Wiki Index\n\nUltimo aggiornamento: ${new Date().toISOString()}\n\n`
+    let md = `# Wiki Index\n\nUltimo aggiornamento: ${new Date().toISOString()}\n\n## Wiki tematiche\n\n`
     for (const [cat, items] of byCategory) {
-      md += `## ${cat.charAt(0).toUpperCase() + cat.slice(1)}\n\n`
+      const label = cat
+        .replace(/-/g, ' ')
+        .replace(/\b\w/g, (c) => c.toUpperCase())
+      md += `### [[${cat}/indice_wiki|${label}]]\n\n`
       if (items.length === 0) {
         md += '*Nessun articolo ancora*\n\n'
       } else {
@@ -66,6 +79,27 @@ export class WikiIndex {
         }
         md += '\n'
       }
+    }
+    return md
+  }
+
+  toThematicIndexMarkdown(wiki: string, entries: WikiIndexEntry[]): string {
+    const label = wiki
+      .replace(/-/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+    let md = `# ${label} — Indice\n\n`
+    if (entries.length === 0) {
+      md +=
+        '*Nessun articolo ancora. Usa \`ingest\` per aggiungere nuove fonti.*\n'
+    } else {
+      md += '## Articoli\n\n'
+      md += entries
+        .map(
+          (e) =>
+            `- [[${e.path}|${e.title}]]${e.summary ? `: ${e.summary}` : ''}`,
+        )
+        .join('\n')
+      md += '\n'
     }
     return md
   }

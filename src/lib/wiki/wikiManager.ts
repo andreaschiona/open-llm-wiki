@@ -1,10 +1,12 @@
 import { logger } from '../utils/logger'
+import { WikiIndex } from './wikiIndex'
 import type {
   WikiPage,
   PageMeta,
   LogEntry,
   WikiTreeNode,
   RawFileInfo,
+  WikiIndexEntry,
 } from '../../types'
 
 const WIKI_BASE = 'wiki'
@@ -325,6 +327,45 @@ ${wikis}
 
   async updateIndex(content: string): Promise<void> {
     await this.fileOps.writeFile(this.resolvePath('indice.md'), content)
+  }
+
+  async updateThematicWikiIndex(
+    wiki: string,
+    newEntries: WikiIndexEntry[],
+  ): Promise<void> {
+    const indexPath = `${wiki}/indice_wiki.md`
+    const fullPath = this.resolvePath(indexPath)
+    try {
+      const existing = await this.fileOps.readFile(fullPath)
+      const wi = new WikiIndex()
+      wi.fromMarkdown(existing)
+      for (const e of newEntries) {
+        wi.addEntry(e)
+      }
+      const allEntries = wi.getEntries()
+      await this.fileOps.writeFile(
+        fullPath,
+        wi.toThematicIndexMarkdown(wiki, allEntries),
+      )
+      logger.info(
+        'WikiManager',
+        `Updated ${indexPath} with ${newEntries.length} new entries`,
+      )
+    } catch {
+      // Create new indice_wiki.md if it doesn't exist
+      const wi = new WikiIndex()
+      for (const e of newEntries) {
+        wi.addEntry(e)
+      }
+      await this.fileOps.writeFile(
+        fullPath,
+        wi.toThematicIndexMarkdown(wiki, wi.getEntries()),
+      )
+      logger.info(
+        'WikiManager',
+        `Created ${indexPath} with ${newEntries.length} entries`,
+      )
+    }
   }
 
   async searchIndex(keyword: string): Promise<string[]> {
