@@ -53,7 +53,8 @@ export class IngestionPipeline {
       this.emit(taskId, 'saving-raw', 10, 'Saving raw source...')
 
       const rawCategory = this.detectRawCategory(source)
-      const rawFilename = this.sanitizeFilename(title) + this.getExtension(source)
+      const rawFilename =
+        this.sanitizeFilename(title) + this.getExtension(source)
       await this.wikiManager.writeRawFile(rawCategory, rawFilename, rawContent)
 
       this.emit(taskId, 'reading', 20, 'Reading full document...')
@@ -76,7 +77,12 @@ export class IngestionPipeline {
         if (!existingTitles.has(concept.name.toLowerCase())) {
           newConcepts.push(concept)
         } else {
-          this.emit(taskId, 'reconciling', 55, `Skipping existing concept: ${concept.name}`)
+          this.emit(
+            taskId,
+            'reconciling',
+            55,
+            `Skipping existing concept: ${concept.name}`,
+          )
         }
       }
 
@@ -91,7 +97,7 @@ title: ${title}
 created: ${today}
 updated: ${today}
 source: ${source}
-tags: [${analysis.tags.length > 0 ? analysis.tags.map(t => `"${t}"`).join(', ') : 'ingested, summary'}]
+tags: [${analysis.tags.length > 0 ? analysis.tags.map((t) => `"${t}"`).join(', ') : 'ingested, summary'}]
 ---
 
 # ${title}
@@ -102,15 +108,19 @@ ${analysis.summary}
 
 ## Concepts
 
-${newConcepts.length > 0
-    ? newConcepts.map(c => `- [[${c.name}]] — ${c.description}`).join('\n')
-    : '*No new concepts extracted*'}
+${
+  newConcepts.length > 0
+    ? newConcepts.map((c) => `- [[${c.name}]] — ${c.description}`).join('\n')
+    : '*No new concepts extracted*'
+}
 
 ## Related Pages
 
-${analysis.relatedPages.length > 0
+${
+  analysis.relatedPages.length > 0
     ? analysis.relatedPages.map((r: string) => `- [[${r}]]`).join('\n')
-    : '*None yet*'}
+    : '*None yet*'
+}
 
 ## Cross-References
 
@@ -199,7 +209,10 @@ ${concept.description}
       await this.wikiManager.appendLog(logEntry)
 
       this.emit(taskId, 'done', 100, 'Ingestion complete!')
-      logger.info('IngestionPipeline', `Processed: ${title} (${newConcepts.length} new concepts)`)
+      logger.info(
+        'IngestionPipeline',
+        `Processed: ${title} (${newConcepts.length} new concepts)`,
+      )
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       logger.error('IngestionPipeline', `Failed to process "${title}"`, {
@@ -268,7 +281,10 @@ Rules:
     const response = await this.llmProvider.chat({
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Analyze this document titled "${title}":\n\n${truncated}` },
+        {
+          role: 'user',
+          content: `Analyze this document titled "${title}":\n\n${truncated}`,
+        },
       ],
       temperature: 0.2,
     })
@@ -299,14 +315,36 @@ Rules:
     } catch {
       hostname = ''
     }
-    const isGitHubHost = hostname === 'github.com' || hostname.endsWith('.github.com')
+    const isGitHubHost =
+      hostname === 'github.com' || hostname.endsWith('.github.com')
 
     if (filename.endsWith('.pdf')) return 'pdfs'
-    if (filename.endsWith('.mp3') || filename.endsWith('.wav') || filename.endsWith('.ogg')) return 'audio'
-    if (isGitHubHost || filename.endsWith('.py') || filename.endsWith('.js') || filename.endsWith('.rs')) return 'code'
-    if (filename.endsWith('.json') || filename.endsWith('.csv') || filename.endsWith('.sql')) return 'data'
+    if (
+      filename.endsWith('.mp3') ||
+      filename.endsWith('.wav') ||
+      filename.endsWith('.ogg')
+    )
+      return 'audio'
+    if (
+      isGitHubHost ||
+      filename.endsWith('.py') ||
+      filename.endsWith('.js') ||
+      filename.endsWith('.rs')
+    )
+      return 'code'
+    if (
+      filename.endsWith('.json') ||
+      filename.endsWith('.csv') ||
+      filename.endsWith('.sql')
+    )
+      return 'data'
     if (filename.endsWith('.txt') || filename.endsWith('.md')) return 'meetings'
-    if (url.includes('chat') || url.includes('slack') || url.includes('discord')) return 'chat'
+    if (
+      url.includes('chat') ||
+      url.includes('slack') ||
+      url.includes('discord')
+    )
+      return 'chat'
     return 'other'
   }
 
@@ -319,6 +357,8 @@ Rules:
 
   private getExtension(source: string): string {
     const parts = source.split('.')
-    return parts.length > 1 ? `.${parts[parts.length - 1].split(/[/?#]/)[0].toLowerCase()}` : '.txt'
+    return parts.length > 1
+      ? `.${parts[parts.length - 1].split(/[/?#]/)[0].toLowerCase()}`
+      : '.txt'
   }
 }
