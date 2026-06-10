@@ -65,7 +65,10 @@ export class WikiIndex {
    *
    * If the file has no ## Articoli section yet, it is appended.
    */
-  updateThematicSection(existingContent: string, entries: WikiIndexEntry[]): string {
+  updateThematicSection(
+    existingContent: string,
+    entries: WikiIndexEntry[],
+  ): string {
     // Split at the first ## Articoli heading
     const articoliIdx = existingContent.search(/^## Articoli/m)
     const preamble =
@@ -80,7 +83,8 @@ export class WikiIndex {
   private renderArticoliSection(entries: WikiIndexEntry[]): string {
     let md = '## Articoli\n\n'
     if (entries.length === 0) {
-      md += '_Nessun articolo ancora. Usa `ingest` per aggiungere nuove fonti._\n'
+      md +=
+        '_Nessun articolo ancora. Usa `ingest` per aggiungere nuove fonti._\n'
     } else {
       md += entries
         .map(
