@@ -391,7 +391,7 @@ export class WikiLint {
       const page = await this.wikiManager.readPage(file)
       if (!page) continue
 
-      if (!page.content.startsWith('# ') && !page.content.startsWith('# ')) {
+      if (!page.content.startsWith('# ')) {
         if (!page.content.match(/^#\s+.+/m)) {
           issues.push({
             type: 'schema-violation',
