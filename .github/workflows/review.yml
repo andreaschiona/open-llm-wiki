@@ -1,0 +1,128 @@
+name: Agentic Review
+
+on:
+  workflow_run:
+    workflows: ["Lint"]
+    types:
+      - completed
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  checks: read
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Get PR info from triggering workflow
+        id: pr_info
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const run = context.payload.workflow_run;
+            const prs = run.pull_requests;
+            if (!prs || prs.length === 0) {
+              core.setFailed('No pull request found for this workflow run');
+              return;
+            }
+            const pr = prs[0];
+            core.setOutput('pr_number', pr.number.toString());
+            core.setOutput('pr_url', pr.html_url);
+
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ steps.pr_info.outputs.pr_number }}/head
+          fetch-depth: 0
+
+      - name: Get PR diff and run AI code review
+        id: code_review
+        uses: actions/github-script@v9
+        env:
+          PR_NUMBER: ${{ steps.pr_info.outputs.pr_number }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = parseInt(process.env.PR_NUMBER);
+            const apiKey = process.env.OPENROUTER_API_KEY;
+
+            const { data: prData } = await github.rest.pulls.get({
+              owner: context.repo.owner, repo: context.repo.repo, pull_number: prNumber
+            });
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner, repo: context.repo.repo, pull_number: prNumber
+            });
+
+            let comment = '## AI Code Review\n\n';
+            comment += '**PR:** #' + prNumber + ' - ' + prData.title + '\n\n';
+            comment += '**Files changed:** ' + files.length + '\n\n';
+            comment += '| File | Status | +/- |\n|------|--------|-----|\n';
+            for (const f of files) {
+              comment += '| `' + f.filename + '` | ' + f.status + ' | +' + f.additions + '/-' + f.deletions + ' |\n';
+            }
+
+            if (apiKey) {
+              let patches = [];
+              for (let i = 0; i < Math.min(files.length, 4); i++) {
+                const f = files[i];
+                if (f.patch && f.patch.length < 6000) {
+                  patches.push('File: ' + f.filename + '\n\n' + f.patch);
+                }
+              }
+              if (patches.length > 0) {
+                const prompt = 'You are a senior code reviewer for TypeScript, React, and Tauri projects.\n' +
+                  'Review the following PR diff and provide:\n' +
+                  '1) Brief summary of what the code does\n' +
+                  '2) Any bugs or potential issues\n' +
+                  '3) Suggestions for improvement (error handling, security, best practices)\n\n' +
+                  patches.join('\n---\n');
+                try {
+                  const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      model: 'openai/gpt-4o-mini',
+                      messages: [
+                        { role: 'system', content: 'You are an expert code reviewer.' },
+                        { role: 'user', content: prompt }
+                      ],
+                      max_tokens: 2000
+                    })
+                  });
+                  const data = await resp.json();
+                  const review = data.choices?.[0]?.message?.content || 'No review generated.';
+                  comment += '\n\n### AI Review\n\n' + review;
+                } catch (err) {
+                  comment += '\n\n### AI Review Error\n\n' + err.message;
+                }
+              } else {
+                comment += '\n\nNo reviewable patches found.';
+              }
+            } else {
+              comment += '\n\n> Set OPENROUTER_API_KEY secret to enable AI review.';
+            }
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: prNumber, body: comment
+            });
+            core.setOutput('review_posted', 'true');
+
+      - name: Trigger OpenCode fix agent
+        if: steps.code_review.outputs.review_posted == 'true'
+        uses: actions/github-script@v9
+        env:
+          PR_NUMBER: ${{ steps.pr_info.outputs.pr_number }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = parseInt(process.env.PR_NUMBER);
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: prNumber, body: '/oc review'
+            });
+            console.log('Posted /oc review on PR #' + prNumber);
