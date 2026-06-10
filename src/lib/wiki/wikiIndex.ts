@@ -5,50 +5,53 @@ export class WikiIndex {
 
   constructor() {}
 
-  fromMarkdown(content: string): void {
+  /**
+   * Parse entries from a thematic indice_wiki.md.
+   * Category is set to the provided wiki slug (e.g. "ai-news") so it round-trips
+   * correctly without going through a display-label transformation.
+   */
+  fromMarkdown(content: string, wikiSlug?: string): void {
     this.entries = []
-    let currentCategory = ''
+    let inArticoli = false
     const lines = content.split('\n')
     for (const line of lines) {
-      const catMatch = line.match(/^#+\s+(.+)/)
-      if (catMatch) {
-        const raw = catMatch[1].trim()
-        // Extract label from [[path|label]] if present
-        const pipeIdx = raw.indexOf('|')
-        currentCategory =
-          pipeIdx >= 0
-            ? raw
-                .slice(pipeIdx + 1, raw.lastIndexOf(']'))
-                .trim()
-                .toLowerCase()
-            : raw.toLowerCase()
+      // Detect ## Articoli section
+      if (/^##\s+Articoli/.test(line)) {
+        inArticoli = true
         continue
       }
-      // Parse [[wikilink|label]] syntax
+      // Any other ## heading ends the Articoli section
+      if (/^##\s+/.test(line) && inArticoli) {
+        inArticoli = false
+        continue
+      }
+      if (!inArticoli) continue
+
+      // Parse [[path|label]] syntax
       const wikiLinkMatch = line.match(
-        /^\s*[-*]\s+\[\[([^\]]+)\|([^\]]+)\]\]\s*[:-]{0,1}\s*(.*)/,
+        /^\s*[-*]\s+\[\[([^\]]+)\|([^\]]+)\]\]\s*[:-]?\s*(.*)/,
       )
-      if (wikiLinkMatch && currentCategory) {
+      if (wikiLinkMatch) {
         this.entries.push({
-          title: wikiLinkMatch[2],
-          path: wikiLinkMatch[1],
-          category: currentCategory,
+          title: wikiLinkMatch[2].trim(),
+          path: wikiLinkMatch[1].trim(),
+          category: wikiSlug ?? wikiLinkMatch[1].split('/')[0],
           summary: wikiLinkMatch[3] || '',
           tags: [],
           updated: new Date().toISOString(),
         })
         continue
       }
-      // Parse [title](path) syntax
-      const entryMatch = line.match(
-        /^\s*[-*]\s+\[([^\]]+)\]\(([^)]+)\)\s*[:-]{0,1}\s*(.*)/,
+      // Parse [title](path) syntax (legacy fallback)
+      const mdLinkMatch = line.match(
+        /^\s*[-*]\s+\[([^\]]+)\]\(([^)]+)\)\s*[:-]?\s*(.*)/,
       )
-      if (entryMatch && currentCategory) {
+      if (mdLinkMatch) {
         this.entries.push({
-          title: entryMatch[1],
-          path: entryMatch[2],
-          category: currentCategory,
-          summary: entryMatch[3] || '',
+          title: mdLinkMatch[1].trim(),
+          path: mdLinkMatch[2].trim(),
+          category: wikiSlug ?? mdLinkMatch[2].split('/')[0],
+          summary: mdLinkMatch[3] || '',
           tags: [],
           updated: new Date().toISOString(),
         })
@@ -56,42 +59,33 @@ export class WikiIndex {
     }
   }
 
-  toMarkdown(): string {
-    const byCategory = new Map<string, WikiIndexEntry[]>()
-    for (const entry of this.entries) {
-      const cat = entry.category
-      if (!byCategory.has(cat)) byCategory.set(cat, [])
-      byCategory.get(cat)!.push(entry)
-    }
+  /**
+   * Regenerate the "## Articoli" section of a thematic indice_wiki.md,
+   * preserving any existing intro paragraph (everything before ## Articoli).
+   *
+   * If the file has no ## Articoli section yet, it is appended.
+   */
+  updateThematicSection(
+    existingContent: string,
+    entries: WikiIndexEntry[],
+  ): string {
+    // Split at the first ## Articoli heading
+    const articoliIdx = existingContent.search(/^## Articoli/m)
+    const preamble =
+      articoliIdx >= 0
+        ? existingContent.slice(0, articoliIdx).trimEnd()
+        : existingContent.trimEnd()
 
-    let md = `# Wiki Index\n\nUltimo aggiornamento: ${new Date().toISOString()}\n\n## Wiki tematiche\n\n`
-    for (const [cat, items] of byCategory) {
-      const label = cat
-        .replace(/-/g, ' ')
-        .replace(/\b\w/g, (c) => c.toUpperCase())
-      md += `### [[${cat}/indice_wiki|${label}]]\n\n`
-      if (items.length === 0) {
-        md += '*Nessun articolo ancora*\n\n'
-      } else {
-        for (const item of items) {
-          md += `- [[${item.path}|${item.title}]]${item.summary ? `: ${item.summary}` : ''}\n`
-        }
-        md += '\n'
-      }
-    }
-    return md
+    const section = this.renderArticoliSection(entries)
+    return `${preamble}\n\n${section}`
   }
 
-  toThematicIndexMarkdown(wiki: string, entries: WikiIndexEntry[]): string {
-    const label = wiki
-      .replace(/-/g, ' ')
-      .replace(/\b\w/g, (c) => c.toUpperCase())
-    let md = `# ${label} — Indice\n\n`
+  private renderArticoliSection(entries: WikiIndexEntry[]): string {
+    let md = '## Articoli\n\n'
     if (entries.length === 0) {
       md +=
-        '*Nessun articolo ancora. Usa \`ingest\` per aggiungere nuove fonti.*\n'
+        '_Nessun articolo ancora. Usa `ingest` per aggiungere nuove fonti._\n'
     } else {
-      md += '## Articoli\n\n'
       md += entries
         .map(
           (e) =>

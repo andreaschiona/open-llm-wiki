@@ -338,29 +338,24 @@ ${wikis}
     try {
       const existing = await this.fileOps.readFile(fullPath)
       const wi = new WikiIndex()
-      wi.fromMarkdown(existing)
+      wi.fromMarkdown(existing, wiki)
       for (const e of newEntries) {
         wi.addEntry(e)
       }
-      const allEntries = wi.getEntries()
-      await this.fileOps.writeFile(
-        fullPath,
-        wi.toThematicIndexMarkdown(wiki, allEntries),
-      )
+      const updated = wi.updateThematicSection(existing, wi.getEntries())
+      await this.fileOps.writeFile(fullPath, updated)
       logger.info(
         'WikiManager',
         `Updated ${indexPath} with ${newEntries.length} new entries`,
       )
     } catch {
-      // Create new indice_wiki.md if it doesn't exist
+      // File doesn't exist yet — create it with just the Articoli section
       const wi = new WikiIndex()
       for (const e of newEntries) {
         wi.addEntry(e)
       }
-      await this.fileOps.writeFile(
-        fullPath,
-        wi.toThematicIndexMarkdown(wiki, wi.getEntries()),
-      )
+      const content = wi.updateThematicSection('', wi.getEntries())
+      await this.fileOps.writeFile(fullPath, content)
       logger.info(
         'WikiManager',
         `Created ${indexPath} with ${newEntries.length} entries`,
