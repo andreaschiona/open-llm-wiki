@@ -1,6 +1,5 @@
 import type { LLMProvider } from '../llm/provider'
 import { WikiManager } from '../wiki/wikiManager'
-import { WikiIndex } from '../wiki/wikiIndex'
 import { logger } from '../utils/logger'
 import { reportError } from '../utils/errorReporter'
 import type { LogEntry } from '../../types'
@@ -168,7 +167,7 @@ ${concept.description}
         category: p.startsWith('concetti/') ? 'concetti' : targetWiki,
       }))
 
-      // Update the thematic wiki's indice_wiki.md
+      // Update only the thematic indice_wiki.md files — indice.md is hand-authored
       const targetEntries = newEntries.filter((e) => e.category === targetWiki)
       if (targetEntries.length > 0) {
         await this.wikiManager.updateThematicWikiIndex(
@@ -185,15 +184,6 @@ ${concept.description}
           concettiEntries,
         )
       }
-
-      // Update the main wiki/indice.md
-      const mainIndex = await this.wikiManager.getIndex()
-      const wikiIndex = new WikiIndex()
-      wikiIndex.fromMarkdown(mainIndex)
-      for (const e of newEntries) {
-        wikiIndex.addEntry(e)
-      }
-      await this.wikiManager.updateIndex(wikiIndex.toMarkdown())
 
       this.emit(taskId, 'log', 95, 'Updating change log...')
 
