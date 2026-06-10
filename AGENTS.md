@@ -3,7 +3,7 @@
 ## STOP -- Read This First
 
 You are handling a `/oc` slash command. You MUST:
-1. Parse the command from the triggering comment (analyze, plan, fix, implement, fixCheck).
+1. Parse the command from the triggering comment (analyze, plan, fix, implement, fixCheck, review).
 2. Execute ONLY that command's behavior as defined below.
 3. For `analyze` and `plan`: POST A COMMENT ONLY. Do NOT edit files, create branches, or PRs.
 4. For `fix`: push a branch only. Do NOT create a PR.
@@ -49,6 +49,7 @@ When opencode is triggered by a comment:
 | `/oc plan` | Issue | (Requires prior analyze comment) Read the analysed functional requirement from the issue. Produce a technical implementation plan with file-level breakdown, and post it as a new issue comment. List each file to create or modify, the approach, and any dependencies. |
 | `/oc implement` | Issue | (Requires prior plan comment) Create a feature branch named `issue-{{number}}` from `master`. Implement the plan file-by-file, committing each logical unit with a conventional commit message. Open a Pull Request targeting `master` that includes `Closes #{{number}}` in the description. |
 | `/oc fixCheck` | PR | Read the PR's automated check results (lint errors, test failures). For each failure, apply a fix, amend the PR branch, and re-trigger checks. Repeat up to 3 retries. When done (all passing or retries exhausted), post a status comment on the PR. |
+| `/oc review` | PR | Perform a full code review AND automated fix. Read the PR diff and file changes, produce a structured review comment with: changed file summary, code quality analysis, bug findings, and improvement suggestions. Then execute the same fix logic as `/oc fixCheck`: read check results, apply fixes, amend the PR branch, and re-trigger checks up to 3 retries. Post both the review and the fix status as PR comments. |
 
 ### CRITICAL RULES -- READ BEFORE ACTING
 
@@ -56,6 +57,7 @@ When opencode is triggered by a comment:
 - **`/oc plan` MUST ONLY post a comment.** NEVER create branches, commits, or PRs for plan.
 - **`/oc fix` MUST NOT create a PR.** Only push the fix branch.
 - **`/oc implement` is the ONLY command that creates a PR.**
+- **`/oc fixCheck` and `/oc review` MUST NOT create a new branch or PR; they work on the existing PR branch.**
 - If the command is `analyze`, your ENTIRE output is a GitHub issue comment. Nothing else.
 - Execute EXACTLY ONE command per invocation. Do not chain or anticipate next steps.
 

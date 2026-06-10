@@ -123,6 +123,6 @@ jobs:
             const prNumber = parseInt(process.env.PR_NUMBER);
             await github.rest.issues.createComment({
               owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: prNumber, body: '/oc fixCheck'
+              issue_number: prNumber, body: '/oc review'
             });
-            console.log('Posted /oc fixCheck on PR #' + prNumber);
+            console.log('Posted /oc review on PR #' + prNumber);
