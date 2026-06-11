@@ -34,6 +34,24 @@ export function IngestionPanel() {
   const handleUrlIngest = async () => {
     if (!urlInput.trim()) return
 
+    try {
+      UrlIngestor.validateUrl(urlInput.trim())
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'URL non valida'
+      const task: IngestionTask = {
+        id: Date.now().toString(),
+        type: 'url',
+        source: urlInput,
+        status: 'error',
+        progress: 0,
+        progressLabel: msg,
+        error: msg,
+        createdAt: new Date().toISOString(),
+      }
+      addIngestionTask(task)
+      return
+    }
+
     const task: IngestionTask = {
       id: Date.now().toString(),
       type: 'url',

@@ -8,7 +8,55 @@ export interface UrlIngestResult {
 }
 
 export class UrlIngestor {
+  static validateUrl(url: string): void {
+    let parsed: URL
+    try {
+      parsed = new URL(url)
+    } catch {
+      throw new Error(`URL non valida: ${url}`)
+    }
+
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new Error(
+        `Protocollo non permesso: ${parsed.protocol}. Solo http/https sono supportati.`,
+      )
+    }
+
+    const hostname = parsed.hostname.toLowerCase()
+
+    if (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '::1'
+    ) {
+      throw new Error('URL non permessa: indirizzi localhost bloccati')
+    }
+
+    const parts = hostname.split('.').map(Number)
+    if (parts.length === 4 && parts.every((p) => !isNaN(p))) {
+      if (parts[0] === 10)
+        throw new Error('URL non permessa: rete privata 10.x.x.x bloccata')
+      if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31)
+        throw new Error('URL non permessa: rete privata 172.16-31.x.x bloccata')
+      if (parts[0] === 192 && parts[1] === 168)
+        throw new Error('URL non permessa: rete privata 192.168.x.x bloccata')
+      if (parts[0] === 169 && parts[1] === 254)
+        throw new Error('URL non permessa: link-local 169.254.x.x bloccata')
+      if (parts[0] === 127)
+        throw new Error('URL non permessa: loopback bloccato')
+    }
+
+    if (
+      hostname.endsWith('.local') ||
+      hostname.endsWith('.internal') ||
+      hostname === 'host.docker.internal'
+    ) {
+      throw new Error('URL non permessa: hostname interni bloccati')
+    }
+  }
+
   async ingest(url: string): Promise<UrlIngestResult> {
+    UrlIngestor.validateUrl(url)
     logger.info('UrlIngestor', `Fetching URL: ${url}`)
     const response = await fetch(url, {
       headers: {
