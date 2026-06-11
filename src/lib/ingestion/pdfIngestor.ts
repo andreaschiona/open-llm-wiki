@@ -9,6 +9,8 @@ export interface PdfIngestResult {
 }
 
 export class PdfIngestor {
+  private lastPageCount = 0
+
   async ingest(filePath: string): Promise<PdfIngestResult> {
     logger.info('PdfIngestor', `Processing PDF: ${filePath}`)
     const response = await fetch(filePath)
@@ -19,7 +21,7 @@ export class PdfIngestor {
       title,
       content: text,
       source: filePath,
-      pageCount: 1,
+      pageCount: this.lastPageCount,
       fetchedAt: new Date().toISOString(),
     }
   }
@@ -32,13 +34,13 @@ export class PdfIngestor {
     const title = fileName.replace('.pdf', '')
     logger.info(
       'PdfIngestor',
-      `Processed PDF: ${fileName} (${text.length} chars)`,
+      `Processed PDF: ${fileName} (${text.length} chars, ${this.lastPageCount} pages)`,
     )
     return {
       title,
       content: text,
       source: fileName,
-      pageCount: 1,
+      pageCount: this.lastPageCount,
       fetchedAt: new Date().toISOString(),
     }
   }
@@ -47,6 +49,7 @@ export class PdfIngestor {
     try {
       const pdfJsLib = await import('pdfjs-dist')
       const pdf = await pdfJsLib.getDocument({ data: _buffer }).promise
+      this.lastPageCount = pdf.numPages
       let text = ''
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i)

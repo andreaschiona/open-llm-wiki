@@ -107,7 +107,14 @@ const fileOps = {
         if (name) names.add(name)
       }
     }
-    return [...names].filter((n) => n.endsWith('.md'))
+    for (const dir of memDirs) {
+      if (dir.startsWith(prefix)) {
+        const rest = dir.slice(prefix.length)
+        const name = rest.split('/')[0]
+        if (name) names.add(name)
+      }
+    }
+    return [...names]
   },
   createDir: async (path: string): Promise<void> => {
     if (isTauri()) {
