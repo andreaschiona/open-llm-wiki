@@ -4,4 +4,4 @@ Concetti fondamentali, architetture, pattern e terminologia dell'AI. Include RAG
 
 ## Articoli
 
-_Nessun articolo ancora. Usa `ingest` per aggiungere nuove fonti._
+- [[concetti/llm-wiki-pattern|LLM Wiki Pattern]]: Pattern architetturale introdotto da Andrej Karpathy per costruire knowledge base personali gestite da LLM.
