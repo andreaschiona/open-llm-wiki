@@ -195,23 +195,34 @@ export class WikiLint {
     const issues: LintIssue[] = []
     const files = await this.wikiManager.listAllWikiFiles()
 
+    const pages = new Map<string, { content: string; tags: string[] }>()
     for (let i = 0; i < files.length; i++) {
       this.onProgress?.('contradictions', i + 1, files.length)
-      const pageA = await this.wikiManager.readPage(files[i])
-      if (!pageA) continue
+      const page = await this.wikiManager.readPage(files[i])
+      if (page)
+        pages.set(files[i], { content: page.content, tags: page.meta.tags })
+    }
 
-      for (let j = i + 1; j < files.length; j++) {
-        const pageB = await this.wikiManager.readPage(files[j])
-        if (!pageB) continue
+    const pagesList = [...pages.entries()]
+    for (let i = 0; i < pagesList.length; i++) {
+      const [fileA, pageA] = pagesList[i]
+      const tagsA = new Set(pageA.tags.map((t) => t.toLowerCase()))
+
+      for (let j = i + 1; j < pagesList.length; j++) {
+        const [fileB, pageB] = pagesList[j]
+        const tagsB = pageB.tags.map((t) => t.toLowerCase())
+
+        const sharesTag = tagsB.some((t) => tagsA.has(t))
+        if (!sharesTag) continue
 
         const conflicts = this.detectConflicts(pageA.content, pageB.content)
         for (const conflict of conflicts) {
           issues.push({
             type: 'contradiction',
             severity: 'warning',
-            file: files[i],
+            file: fileA,
             message: conflict,
-            detail: `Between "${files[i]}" and "${files[j]}"`,
+            detail: `Between "${fileA}" and "${fileB}"`,
           })
         }
       }

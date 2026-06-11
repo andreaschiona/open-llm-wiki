@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { UpdateInfo } from '../types'
+import { logger } from '../lib/utils/logger'
 
 interface UpdateState {
   updateInfo: UpdateInfo
@@ -14,7 +15,15 @@ async function getCurrentVersion(): Promise<string> {
     const { invoke } = await import('@tauri-apps/api/core')
     return await invoke<string>('get_app_version')
   } catch {
-    return '0.3.11'
+    try {
+      const resp = await fetch('/VERSION')
+      const text = await resp.text()
+      const match = text.match(/version=(.+)/)
+      if (match) return match[1].trim()
+    } catch {
+      logger.warn('useUpdateStore', 'Failed to read VERSION file')
+    }
+    return '0.0.0'
   }
 }
 
@@ -32,7 +41,7 @@ function compareVersions(a: string, b: string): number {
 
 export const useUpdateStore = create<UpdateState>((set, get) => ({
   updateInfo: {
-    currentVersion: '0.3.11',
+    currentVersion: '0.0.0',
     latestVersion: null,
     latestUrl: null,
     status: 'up-to-date',

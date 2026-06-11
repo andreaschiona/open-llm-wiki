@@ -7,6 +7,7 @@ import { SettingsPanel } from './components/SettingsPanel'
 import { useWikiStore } from './store/useWikiStore'
 import { useConfigStore } from './store/useConfigStore'
 import { useUpdateStore } from './store/useUpdateStore'
+import { logger } from './lib/utils/logger'
 import type { AppView } from './types'
 import './App.css'
 import './components/Sidebar.css'
@@ -45,7 +46,9 @@ const fileOps = {
         const { readTextFile, BaseDirectory } =
           await import('@tauri-apps/plugin-fs')
         return await readTextFile(path, { baseDir: BaseDirectory.AppData })
-      } catch {}
+      } catch {
+        logger.warn('fileOps.readFile', `Tauri readFile failed for ${path}`)
+      }
     }
     return memStore.get(path) ?? ''
   },
@@ -56,7 +59,9 @@ const fileOps = {
           await import('@tauri-apps/plugin-fs')
         await writeTextFile(path, content, { baseDir: BaseDirectory.AppData })
         return
-      } catch {}
+      } catch {
+        logger.warn('fileOps.writeFile', `Tauri writeFile failed for ${path}`)
+      }
     }
     memStore.set(path, content)
   },
@@ -66,7 +71,9 @@ const fileOps = {
         const { readDir, BaseDirectory } = await import('@tauri-apps/plugin-fs')
         const entries = await readDir(path, { baseDir: BaseDirectory.AppData })
         return entries.map((e) => e.name)
-      } catch {}
+      } catch {
+        logger.warn('fileOps.listDir', `Tauri listDir failed for ${path}`)
+      }
     }
     const prefix = path.endsWith('/') ? path : path + '/'
     const names = new Set<string>()
@@ -85,7 +92,9 @@ const fileOps = {
         const { mkdir, BaseDirectory } = await import('@tauri-apps/plugin-fs')
         await mkdir(path, { baseDir: BaseDirectory.AppData, recursive: true })
         return
-      } catch {}
+      } catch {
+        logger.warn('fileOps.createDir', `Tauri mkdir failed for ${path}`)
+      }
     }
     memDirs.add(path)
   },
@@ -94,7 +103,9 @@ const fileOps = {
       try {
         const { exists, BaseDirectory } = await import('@tauri-apps/plugin-fs')
         return await exists(path, { baseDir: BaseDirectory.AppData })
-      } catch {}
+      } catch {
+        logger.warn('fileOps.fileExists', `Tauri fileExists failed for ${path}`)
+      }
     }
     return memStore.has(path) || memDirs.has(path)
   },
@@ -104,7 +115,9 @@ const fileOps = {
         const { remove, BaseDirectory } = await import('@tauri-apps/plugin-fs')
         await remove(path, { baseDir: BaseDirectory.AppData })
         return
-      } catch {}
+      } catch {
+        logger.warn('fileOps.deleteFile', `Tauri remove failed for ${path}`)
+      }
     }
     memStore.delete(path)
   },
@@ -117,23 +130,34 @@ const fileOps = {
           recursive: recursive ?? false,
         })
       } catch {
+        logger.warn(
+          'fileOps.deleteDir',
+          `Tauri remove failed for ${path}, trying recursive fallback`,
+        )
         if (recursive) {
           const { readDir } = await import('@tauri-apps/plugin-fs')
-          const entries = await readDir(path, {
-            baseDir: BaseDirectory.AppData,
-          })
-          for (const entry of entries) {
-            const childPath = `${path}/${entry.name}`
-            if (entry.isDirectory) {
-              await remove(childPath, {
-                baseDir: BaseDirectory.AppData,
-                recursive: true,
-              })
-            } else {
-              await remove(childPath, { baseDir: BaseDirectory.AppData })
+          try {
+            const entries = await readDir(path, {
+              baseDir: BaseDirectory.AppData,
+            })
+            for (const entry of entries) {
+              const childPath = `${path}/${entry.name}`
+              if (entry.isDirectory) {
+                await remove(childPath, {
+                  baseDir: BaseDirectory.AppData,
+                  recursive: true,
+                })
+              } else {
+                await remove(childPath, { baseDir: BaseDirectory.AppData })
+              }
             }
+            await remove(path, { baseDir: BaseDirectory.AppData })
+          } catch {
+            logger.warn(
+              'fileOps.deleteDir',
+              `Tauri recursive delete failed for ${path}`,
+            )
           }
-          await remove(path, { baseDir: BaseDirectory.AppData })
         }
       }
       return

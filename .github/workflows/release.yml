@@ -104,30 +104,10 @@ jobs:
       - name: Install npm dependencies
         run: npm install
 
-      - name: Generate app icon
-        run: |
-          node -e "
-          const fs = require('fs');
-          const zlib = require('zlib');
-          function crc32(buf) {
-            let c = 0xffffffff;
-            for (let i = 0; i < buf.length; i++) { c ^= buf[i]; for (let j = 0; j < 8; j++) c = c & 1 ? (c >>> 1) ^ 0xedb88320 : c >>> 1; }
-            return (c ^ 0xffffffff) >>> 0;
-          }
-          function chunk(t, d) { const l = Buffer.alloc(4); l.writeUInt32BE(d.length); const tb = Buffer.from(t); const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(Buffer.concat([tb, d]))); return Buffer.concat([l, tb, d, crc]); }
-          const s = Buffer.from([137,80,78,71,13,10,26,10]);
-          const ih = Buffer.alloc(13); ih.writeUInt32BE(1024,0); ih.writeUInt32BE(1024,4); ih[8]=8; ih[9]=2;
-          const r = []; for (let y = 0; y < 1024; y++) { r.push(0); for (let x = 0; x < 1024; x++) r.push(59,130,246); }
-          const id = chunk('IDAT', zlib.deflateSync(Buffer.from(r)));
-          const ie = chunk('IEND', Buffer.alloc(0));
-          fs.writeFileSync('icon.png', Buffer.concat([s, chunk('IHDR', ih), id, ie]));
-          "
-
       - name: Generate all icon formats
         shell: bash
         run: |
-          npx tauri icon icon.png
-          if [ -d icons ]; then cp -r icons/* src-tauri/icons/ 2>/dev/null || true; fi
+          npx tauri icon src-tauri/icons/icon.png
 
       - name: Build Tauri app
         shell: bash

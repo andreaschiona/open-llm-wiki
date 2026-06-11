@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import type { LLMProviderConfig } from '../types'
 import { ConfigManager } from '../lib/config/configManager'
+import { logger } from '../lib/utils/logger'
+import type { FileOps } from '../lib/wiki/wikiManager'
 
 const GITHUB_TOKEN_KEY = 'open-llm-wiki:github_token'
 
@@ -10,7 +12,7 @@ interface ConfigState {
   activeProviderId: string | null
   initialized: boolean
   githubToken: string
-  init: (fileOps: any) => Promise<void>
+  init: (fileOps: FileOps) => Promise<void>
   addProvider: (provider: LLMProviderConfig) => Promise<void>
   updateProvider: (
     id: string,
@@ -100,6 +102,12 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   },
 
   setGitHubToken: (token: string) => {
+    if (token) {
+      logger.warn(
+        'useConfigStore',
+        'GitHub token salvato in localStorage (non sicuro per produzione)',
+      )
+    }
     saveGitHubToken(token)
     set({ githubToken: token })
   },
