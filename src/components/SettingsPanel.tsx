@@ -70,6 +70,7 @@ export function SettingsPanel() {
     defaultModel: 'gpt-4o-mini',
     models: [],
     isActive: false,
+    supportedInputs: ['text', 'pdf'],
   }
 
   const [newProvider, setNewProvider] =
@@ -534,6 +535,23 @@ export function SettingsPanel() {
                   }
                 />
               </label>
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={newProvider.supportedInputs?.includes('pdf') ?? true}
+                  onChange={(e) =>
+                    setNewProvider({
+                      ...newProvider,
+                      supportedInputs: e.target.checked
+                        ? [...(newProvider.supportedInputs || ['text']), 'pdf']
+                        : (newProvider.supportedInputs || ['text']).filter(
+                            (f) => f !== 'pdf',
+                          ),
+                    })
+                  }
+                />
+                Supports PDF input
+              </label>
             </div>
             <div className="form-actions">
               <button className="btn" onClick={handleCreate}>
@@ -599,6 +617,28 @@ export function SettingsPanel() {
                         }
                       />
                     </label>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={
+                          editing.supportedInputs?.includes('pdf') ?? true
+                        }
+                        onChange={(e) =>
+                          setEditing({
+                            ...editing,
+                            supportedInputs: e.target.checked
+                              ? [
+                                  ...(editing.supportedInputs || ['text']),
+                                  'pdf',
+                                ]
+                              : (editing.supportedInputs || ['text']).filter(
+                                  (f) => f !== 'pdf',
+                                ),
+                          })
+                        }
+                      />
+                      Supports PDF input
+                    </label>
                   </div>
                   <div className="form-actions">
                     <button className="btn" onClick={handleSave}>
@@ -654,6 +694,12 @@ export function SettingsPanel() {
                     <div>Model: {p.defaultModel}</div>
                     <div>URL: {p.baseUrl || '(default)'}</div>
                     <div>API Key: {p.apiKey ? '••••••••' : '(not set)'}</div>
+                    <div>
+                      PDF Input:{' '}
+                      {p.supportedInputs?.includes('pdf')
+                        ? 'Supported'
+                        : 'Not supported'}
+                    </div>
                   </div>
                   {testResult?.id === p.id && (
                     <div

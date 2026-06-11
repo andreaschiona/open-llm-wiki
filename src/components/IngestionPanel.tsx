@@ -95,10 +95,7 @@ export function IngestionPanel() {
       useWikiStore.getState().refreshTree()
       useWikiStore.getState().refreshLog()
 
-      if (
-        pipelineResult.lintResult &&
-        !pipelineResult.lintResult.passed
-      ) {
+      if (pipelineResult.lintResult && !pipelineResult.lintResult.passed) {
         updateIngestionTask(task.id, {
           progressLabel: `Done — ${pipelineResult.lintResult.issues.length} lint issues found`,
         })
@@ -129,6 +126,20 @@ export function IngestionPanel() {
     addIngestionTask(task)
 
     try {
+      const activeConfig = getActiveProvider()
+      const supportedInputs = activeConfig?.supportedInputs ?? ['text', 'pdf']
+      const ext = fileInput.name.split('.').pop()?.toLowerCase()
+      if (ext && !['pdf', 'txt', 'md'].includes(ext)) {
+        throw new Error(
+          `Unsupported file format: .${ext}. Accepted: .pdf, .txt, .md`,
+        )
+      }
+      if (ext === 'pdf' && !supportedInputs.includes('pdf')) {
+        throw new Error(
+          `Cannot read "${fileInput.name}" (this model does not support pdf input)`,
+        )
+      }
+
       updateIngestionTask(task.id, {
         status: 'downloading',
         progress: 10,
@@ -161,10 +172,7 @@ export function IngestionPanel() {
       useWikiStore.getState().refreshTree()
       useWikiStore.getState().refreshLog()
 
-      if (
-        pipelineResult.lintResult &&
-        !pipelineResult.lintResult.passed
-      ) {
+      if (pipelineResult.lintResult && !pipelineResult.lintResult.passed) {
         updateIngestionTask(task.id, {
           progressLabel: `Done — ${pipelineResult.lintResult.issues.length} lint issues found`,
         })

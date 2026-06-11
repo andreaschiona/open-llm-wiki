@@ -21,7 +21,7 @@ This project uses Node.js with a Tauri (Rust) backend.
 | Action | Command |
 |--------|---------|
 | Build  | `echo 'no build'` |
-| Test   | `echo 'no tests'` |
+| Test   | `npx vitest run` |
 | Lint   | `echo 'no linter'` |
 
 ## Environment

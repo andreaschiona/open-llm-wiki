@@ -43,6 +43,7 @@ export interface LLMProviderConfig {
   defaultModel: string
   models: LLMModel[]
   isActive: boolean
+  supportedInputs?: string[]
 }
 
 export interface IngestionTask {
