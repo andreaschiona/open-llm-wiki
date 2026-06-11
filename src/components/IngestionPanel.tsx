@@ -83,7 +83,7 @@ export function IngestionPanel() {
           'Provider LLM non configurato. Vai su Settings per configurare un provider con API key.',
         )
       }
-      await pipeline.processRawSource(
+      const pipelineResult = await pipeline.processRawSource(
         task.id,
         result.title,
         result.content,
@@ -94,6 +94,15 @@ export function IngestionPanel() {
       useWikiStore.getState().refreshIndex()
       useWikiStore.getState().refreshTree()
       useWikiStore.getState().refreshLog()
+
+      if (
+        pipelineResult.lintResult &&
+        !pipelineResult.lintResult.passed
+      ) {
+        updateIngestionTask(task.id, {
+          progressLabel: `Done — ${pipelineResult.lintResult.issues.length} lint issues found`,
+        })
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error'
       updateIngestionTask(task.id, { status: 'error', error: msg })
@@ -140,7 +149,7 @@ export function IngestionPanel() {
           'Provider LLM non configurato. Vai su Settings per configurare un provider con API key.',
         )
       }
-      await pipeline.processRawSource(
+      const pipelineResult = await pipeline.processRawSource(
         task.id,
         result.title,
         result.content,
@@ -151,6 +160,15 @@ export function IngestionPanel() {
       useWikiStore.getState().refreshIndex()
       useWikiStore.getState().refreshTree()
       useWikiStore.getState().refreshLog()
+
+      if (
+        pipelineResult.lintResult &&
+        !pipelineResult.lintResult.passed
+      ) {
+        updateIngestionTask(task.id, {
+          progressLabel: `Done — ${pipelineResult.lintResult.issues.length} lint issues found`,
+        })
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error'
       updateIngestionTask(task.id, { status: 'error', error: msg })
