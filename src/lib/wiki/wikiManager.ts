@@ -98,12 +98,12 @@ export class WikiManager {
         const label = w
           .replace(/-/g, ' ')
           .replace(/\b\w/g, (c) => c.toUpperCase())
-        return `### [[${w}/indice_wiki|${label}]]\nDescrizione della wiki tematica ${label}.`
+        return `### [[${w}/indice_wiki|${label}]]\n_Ancora nessun articolo. Usa \`ingest\` per aggiungere contenuti._`
       })
       .join('\n\n')
     return `# Wiki Index
 
-Ultimo aggiornamento: ${new Date().toISOString()}
+Ultimo aggiornamento: ${new Date().toISOString().split('T')[0]} — **0 articoli**
 
 ## Wiki tematiche
 
@@ -328,13 +328,58 @@ ${wikis}
   async updateMainIndex(): Promise<void> {
     const indexPath = this.resolvePath('indice.md')
     try {
-      let content = await this.fileOps.readFile(indexPath)
-      content = content.replace(
-        /Ultimo aggiornamento: .*/,
-        `Ultimo aggiornamento: ${new Date().toISOString().split('T')[0]}`,
-      )
+      const sections: string[] = []
+      let totalArticles = 0
+
+      for (const wiki of this.thematicWikis) {
+        const files = await this.listWikiFiles(wiki)
+        const articles = files.filter((f) => f !== 'indice_wiki.md')
+        if (articles.length === 0) continue
+
+        const label = wiki
+          .replace(/-/g, ' ')
+          .replace(/\b\w/g, (c) => c.toUpperCase())
+
+        const articleLines: string[] = []
+        for (const article of articles) {
+          const pagePath = `${wiki}/${article}`
+          const page = await this.readPage(pagePath)
+          const displayName = article.replace('.md', '')
+          const summary = page
+            ? page.content
+                .split('\n')
+                .slice(1)
+                .find((l) => l.trim().length > 0 && !l.startsWith('#'))
+                ?.replace(/^>\s*/, '')
+                ?.trim() || ''
+            : ''
+          articleLines.push(
+            `- [[${pagePath}|${displayName}]]${summary ? `: ${summary.slice(0, 120)}` : ''}`,
+          )
+          totalArticles++
+        }
+
+        sections.push(
+          `### [[${wiki}/indice_wiki|${label}]]\n\n${articleLines.join('\n')}`,
+        )
+      }
+
+      const today = new Date().toISOString().split('T')[0]
+      const content = `# Wiki Index
+
+Ultimo aggiornamento: ${today} — **${totalArticles} articoli** in ${sections.length} sezioni
+
+## Wiki tematiche
+
+${sections.join('\n\n')}
+
+---
+
+*Usa \`ingest\` per aggiungere nuovi contenuti.*
+`
       await this.fileOps.writeFile(indexPath, content)
-    } catch {
+    } catch (err) {
+      logger.warn('WikiManager', 'updateMainIndex fallback to initial', err)
       await this.fileOps.writeFile(indexPath, this.generateInitialIndex())
     }
   }
