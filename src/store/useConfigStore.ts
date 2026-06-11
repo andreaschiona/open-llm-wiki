@@ -5,6 +5,7 @@ import { logger } from '../lib/utils/logger'
 import type { FileOps } from '../lib/wiki/wikiManager'
 
 const GITHUB_TOKEN_KEY = 'open-llm-wiki:github_token'
+const WORK_DIR_KEY = 'open-llm-wiki:work_dir'
 
 interface ConfigState {
   configManager: ConfigManager | null
@@ -12,6 +13,7 @@ interface ConfigState {
   activeProviderId: string | null
   initialized: boolean
   githubToken: string
+  workDir: string
   init: (fileOps: FileOps) => Promise<void>
   addProvider: (provider: LLMProviderConfig) => Promise<void>
   updateProvider: (
@@ -22,6 +24,7 @@ interface ConfigState {
   setActiveProvider: (id: string) => Promise<void>
   getActiveProvider: () => LLMProviderConfig | undefined
   setGitHubToken: (token: string) => void
+  setWorkDir: (dir: string) => void
 }
 
 function loadGitHubToken(): string {
@@ -44,12 +47,33 @@ function saveGitHubToken(token: string): void {
   }
 }
 
+function loadWorkDir(): string {
+  try {
+    return localStorage.getItem(WORK_DIR_KEY) || ''
+  } catch {
+    return ''
+  }
+}
+
+function saveWorkDir(dir: string): void {
+  try {
+    if (dir) {
+      localStorage.setItem(WORK_DIR_KEY, dir)
+    } else {
+      localStorage.removeItem(WORK_DIR_KEY)
+    }
+  } catch {
+    /* localStorage not available */
+  }
+}
+
 export const useConfigStore = create<ConfigState>((set, get) => ({
   configManager: null,
   providers: [],
   activeProviderId: null,
   initialized: false,
   githubToken: loadGitHubToken(),
+  workDir: loadWorkDir(),
 
   init: async (fileOps) => {
     const cm = new ConfigManager(fileOps)
@@ -110,5 +134,10 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
     }
     saveGitHubToken(token)
     set({ githubToken: token })
+  },
+
+  setWorkDir: (dir: string) => {
+    saveWorkDir(dir)
+    set({ workDir: dir })
   },
 }))

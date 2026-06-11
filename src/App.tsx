@@ -39,12 +39,27 @@ function isTauri(): boolean {
   )
 }
 
+function tauriOptions() {
+  const workDir = useConfigStore.getState().workDir
+  if (workDir) return { baseDir: undefined, pathPrefix: workDir } as const
+  return { baseDir: 'AppData' as const, pathPrefix: '' } as const
+}
+
+function tauriPath(path: string): string {
+  const opts = tauriOptions()
+  return opts.pathPrefix ? `${opts.pathPrefix}/${path}` : path
+}
+
 const fileOps = {
   readFile: async (path: string): Promise<string> => {
     if (isTauri()) {
       try {
         const { readTextFile, BaseDirectory } =
           await import('@tauri-apps/plugin-fs')
+        const opts = tauriOptions()
+        if (opts.pathPrefix) {
+          return await readTextFile(tauriPath(path))
+        }
         return await readTextFile(path, { baseDir: BaseDirectory.AppData })
       } catch {
         logger.warn('fileOps.readFile', `Tauri readFile failed for ${path}`)
@@ -57,7 +72,12 @@ const fileOps = {
       try {
         const { writeTextFile, BaseDirectory } =
           await import('@tauri-apps/plugin-fs')
-        await writeTextFile(path, content, { baseDir: BaseDirectory.AppData })
+        const opts = tauriOptions()
+        if (opts.pathPrefix) {
+          await writeTextFile(tauriPath(path), content)
+        } else {
+          await writeTextFile(path, content, { baseDir: BaseDirectory.AppData })
+        }
         return
       } catch {
         logger.warn('fileOps.writeFile', `Tauri writeFile failed for ${path}`)
@@ -69,7 +89,10 @@ const fileOps = {
     if (isTauri()) {
       try {
         const { readDir, BaseDirectory } = await import('@tauri-apps/plugin-fs')
-        const entries = await readDir(path, { baseDir: BaseDirectory.AppData })
+        const opts = tauriOptions()
+        const entries = opts.pathPrefix
+          ? await readDir(tauriPath(path))
+          : await readDir(path, { baseDir: BaseDirectory.AppData })
         return entries.map((e) => e.name)
       } catch {
         logger.warn('fileOps.listDir', `Tauri listDir failed for ${path}`)
@@ -90,7 +113,12 @@ const fileOps = {
     if (isTauri()) {
       try {
         const { mkdir, BaseDirectory } = await import('@tauri-apps/plugin-fs')
-        await mkdir(path, { baseDir: BaseDirectory.AppData, recursive: true })
+        const opts = tauriOptions()
+        if (opts.pathPrefix) {
+          await mkdir(tauriPath(path), { recursive: true })
+        } else {
+          await mkdir(path, { baseDir: BaseDirectory.AppData, recursive: true })
+        }
         return
       } catch {
         logger.warn('fileOps.createDir', `Tauri mkdir failed for ${path}`)
@@ -102,6 +130,10 @@ const fileOps = {
     if (isTauri()) {
       try {
         const { exists, BaseDirectory } = await import('@tauri-apps/plugin-fs')
+        const opts = tauriOptions()
+        if (opts.pathPrefix) {
+          return await exists(tauriPath(path))
+        }
         return await exists(path, { baseDir: BaseDirectory.AppData })
       } catch {
         logger.warn('fileOps.fileExists', `Tauri fileExists failed for ${path}`)
@@ -113,7 +145,12 @@ const fileOps = {
     if (isTauri()) {
       try {
         const { remove, BaseDirectory } = await import('@tauri-apps/plugin-fs')
-        await remove(path, { baseDir: BaseDirectory.AppData })
+        const opts = tauriOptions()
+        if (opts.pathPrefix) {
+          await remove(tauriPath(path))
+        } else {
+          await remove(path, { baseDir: BaseDirectory.AppData })
+        }
         return
       } catch {
         logger.warn('fileOps.deleteFile', `Tauri remove failed for ${path}`)
@@ -124,11 +161,17 @@ const fileOps = {
   deleteDir: async (path: string, recursive?: boolean): Promise<void> => {
     if (isTauri()) {
       const { remove, BaseDirectory } = await import('@tauri-apps/plugin-fs')
+      const opts = tauriOptions()
+      const fullPath = tauriPath(path)
       try {
-        await remove(path, {
-          baseDir: BaseDirectory.AppData,
-          recursive: recursive ?? false,
-        })
+        if (opts.pathPrefix) {
+          await remove(fullPath, { recursive: recursive ?? false })
+        } else {
+          await remove(path, {
+            baseDir: BaseDirectory.AppData,
+            recursive: recursive ?? false,
+          })
+        }
       } catch {
         logger.warn(
           'fileOps.deleteDir',
@@ -137,21 +180,34 @@ const fileOps = {
         if (recursive) {
           const { readDir } = await import('@tauri-apps/plugin-fs')
           try {
-            const entries = await readDir(path, {
-              baseDir: BaseDirectory.AppData,
-            })
+            const entries = opts.pathPrefix
+              ? await readDir(fullPath)
+              : await readDir(path, { baseDir: BaseDirectory.AppData })
             for (const entry of entries) {
               const childPath = `${path}/${entry.name}`
+              const childFull = `${fullPath}/${entry.name}`
               if (entry.isDirectory) {
-                await remove(childPath, {
-                  baseDir: BaseDirectory.AppData,
-                  recursive: true,
-                })
+                if (opts.pathPrefix) {
+                  await remove(childFull, { recursive: true })
+                } else {
+                  await remove(childPath, {
+                    baseDir: BaseDirectory.AppData,
+                    recursive: true,
+                  })
+                }
               } else {
-                await remove(childPath, { baseDir: BaseDirectory.AppData })
+                if (opts.pathPrefix) {
+                  await remove(childFull)
+                } else {
+                  await remove(childPath, { baseDir: BaseDirectory.AppData })
+                }
               }
             }
-            await remove(path, { baseDir: BaseDirectory.AppData })
+            if (opts.pathPrefix) {
+              await remove(fullPath)
+            } else {
+              await remove(path, { baseDir: BaseDirectory.AppData })
+            }
           } catch {
             logger.warn(
               'fileOps.deleteDir',

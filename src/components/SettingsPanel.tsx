@@ -4,7 +4,16 @@ import { useUpdateStore } from '../store/useUpdateStore'
 import { useWikiStore } from '../store/useWikiStore'
 import { createProvider } from '../lib/llm/providerFactory'
 import { WikiLint } from '../lib/wiki/wikiLint'
+import { logger } from '../lib/utils/logger'
 import type { LLMProviderConfig, LintResult } from '../types'
+
+function isTauri(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ !==
+      undefined
+  )
+}
 
 const PROVIDER_TYPES = [
   { value: 'openai', label: 'OpenAI Compatible' },
@@ -26,6 +35,8 @@ export function SettingsPanel() {
   } = useConfigStore()
 
   const { wikiManager, refreshTree, refreshIndex } = useWikiStore()
+
+  const { workDir, setWorkDir } = useConfigStore()
 
   const [tokenDraft, setTokenDraft] = useState(githubToken)
   const [tokenSaved, setTokenSaved] = useState(false)
@@ -104,10 +115,33 @@ export function SettingsPanel() {
     }
   }
 
+  const [workDirSaved, setWorkDirSaved] = useState(false)
+
   const handleSaveToken = () => {
     setGitHubToken(tokenDraft)
     setTokenSaved(true)
     setTimeout(() => setTokenSaved(false), 2000)
+  }
+
+  const handleSelectWorkDir = async () => {
+    if (!isTauri()) return
+    try {
+      const { open } = await import('@tauri-apps/plugin-dialog')
+      const selected = await open({ directory: true, multiple: false })
+      if (selected && typeof selected === 'string') {
+        setWorkDir(selected)
+        setWorkDirSaved(true)
+        setTimeout(() => setWorkDirSaved(false), 2000)
+      }
+    } catch (err) {
+      logger.error('SettingsPanel', 'Failed to open folder picker', err)
+    }
+  }
+
+  const handleResetWorkDir = () => {
+    setWorkDir('')
+    setWorkDirSaved(true)
+    setTimeout(() => setWorkDirSaved(false), 2000)
   }
 
   const handleCleanWiki = async () => {
@@ -360,6 +394,43 @@ export function SettingsPanel() {
             <div className="version-status error">
               <span>Check failed: {updateInfo.error}</span>
             </div>
+          )}
+        </div>
+      </section>
+
+      <section className="settings-section">
+        <div className="settings-section-header">
+          <h3>Working Directory</h3>
+        </div>
+        <p className="settings-description">
+          Choose a folder on your computer where wiki files, raw sources, and
+          queries will be saved. Uses the default app data directory if not set.
+        </p>
+        <div className="workdir-form">
+          <div className="workdir-display">
+            <span className="workdir-path">
+              {workDir || '(default app data directory)'}
+            </span>
+          </div>
+          <div className="workdir-actions">
+            {isTauri() && (
+              <button className="btn" onClick={handleSelectWorkDir}>
+                Choose Folder
+              </button>
+            )}
+            <button
+              className="btn btn-secondary"
+              onClick={handleResetWorkDir}
+              disabled={!workDir}
+            >
+              Reset to Default
+            </button>
+            {workDirSaved && <span className="workdir-saved">Saved!</span>}
+          </div>
+          {!isTauri() && (
+            <p className="workdir-browser-note">
+              Folder selection is available only in the desktop app.
+            </p>
           )}
         </div>
       </section>
