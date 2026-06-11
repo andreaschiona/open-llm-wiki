@@ -1,3 +1,4 @@
+import TurndownService from 'turndown'
 import { logger } from '../utils/logger'
 
 export interface UrlIngestResult {
@@ -22,7 +23,7 @@ export class UrlIngestor {
       )
     }
 
-    const hostname = parsed.hostname.toLowerCase()
+    const hostname = parsed.hostname.replace(/^\[|\]$/g, '').toLowerCase()
 
     if (
       hostname === 'localhost' ||
@@ -85,87 +86,14 @@ export class UrlIngestor {
     return match ? match[1].trim() : 'Untitled'
   }
 
-  private decodeHtmlEntities(text: string): string {
-    const entities: Record<string, string> = {
-      '&amp;': '&',
-      '&lt;': '<',
-      '&gt;': '>',
-      '&quot;': '"',
-      '&#39;': "'",
-      '&nbsp;': ' ',
-      '&#x27;': "'",
-      '&#x2F;': '/',
-    }
-    const pattern = /&(?:amp|lt|gt|quot|#39|nbsp|#x27|#x2F);/g
-    return text.replace(pattern, (m) => entities[m] || m)
-  }
-
-  private stripTagBlocks(text: string, tag: string): string {
-    const open = new RegExp(`<${tag}[^>]*>`, 'gi')
-    const close = new RegExp(`<\\/${tag}[^>]*>`, 'gi')
-    let result = text
-    // Remove complete blocks: <tag...>...</tag...>
-    result = result.replace(
-      new RegExp(`<${tag}[^>]*>[\\s\\S]*?<\\/${tag}[^>]*>`, 'gi'),
-      '',
-    )
-    // Remove any remaining <tag and </tag fragments
-    result = result.replace(open, '')
-    result = result.replace(close, '')
-    return result
-  }
-
   private htmlToMarkdown(html: string): string {
-    let text = html
-    text = this.stripTagBlocks(text, 'script')
-    text = this.stripTagBlocks(text, 'style')
-    text = this.stripTagBlocks(text, 'nav')
-    text = this.stripTagBlocks(text, 'header')
-    text = this.stripTagBlocks(text, 'footer')
-    text = this.stripTagBlocks(text, 'aside')
-
-    text = text.replace(/<h1[^>]*>/gi, '\n# ')
-    text = text.replace(/<h2[^>]*>/gi, '\n## ')
-    text = text.replace(/<h3[^>]*>/gi, '\n### ')
-    text = text.replace(/<h4[^>]*>/gi, '\n#### ')
-    text = text.replace(/<h5[^>]*>/gi, '\n##### ')
-    text = text.replace(/<h6[^>]*>/gi, '\n###### ')
-    text = text.replace(/<\/h[1-6][^>]*>/gi, '\n')
-
-    text = text.replace(/<p[^>]*>/gi, '\n')
-    text = text.replace(/<\/p[^>]*>/gi, '\n')
-
-    text = text.replace(/<strong[^>]*>/gi, '**')
-    text = text.replace(/<\/strong[^>]*>/gi, '**')
-    text = text.replace(/<b[^>]*>/gi, '**')
-    text = text.replace(/<\/b[^>]*>/gi, '**')
-    text = text.replace(/<em[^>]*>/gi, '*')
-    text = text.replace(/<\/em[^>]*>/gi, '*')
-    text = text.replace(/<i[^>]*>/gi, '*')
-    text = text.replace(/<\/i[^>]*>/gi, '*')
-
-    text = text.replace(/<ul[^>]*>/gi, '\n')
-    text = text.replace(/<\/ul[^>]*>/gi, '\n')
-    text = text.replace(/<li[^>]*>/gi, '\n- ')
-    text = text.replace(/<\/li[^>]*>/gi, '')
-    text = text.replace(/<ol[^>]*>/gi, '\n')
-    text = text.replace(/<\/ol[^>]*>/gi, '\n')
-
-    text = text.replace(/<code[^>]*>/gi, '`')
-    text = text.replace(/<\/code[^>]*>/gi, '`')
-    text = text.replace(/<pre[^>]*>/gi, '\n```\n')
-    text = text.replace(/<\/pre[^>]*>/gi, '\n```\n')
-
-    text = text.replace(/<a[^>]*href="([^"]*)"[^>]*>/gi, '[$1](')
-    text = text.replace(/<\/a[^>]*>/gi, ')')
-    text = text.replace(/<br\s*\/?>/gi, '\n')
-    text = text.replace(/<[^>]+>/g, '')
-
-    text = this.decodeHtmlEntities(text)
-    text = text.replace(/\n{3,}/g, '\n\n')
-    text = text.replace(/^\s+|\s+$/g, '')
-    text = text.replace(/\n\s+\n/g, '\n\n')
-
-    return text
+    const turndown = new TurndownService({
+      headingStyle: 'atx',
+      codeBlockStyle: 'fenced',
+      emDelimiter: '*',
+      bulletListMarker: '-',
+    })
+    turndown.remove(['script', 'style', 'nav', 'header', 'footer', 'aside'])
+    return turndown.turndown(html)
   }
 }
