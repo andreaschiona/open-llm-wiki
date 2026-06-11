@@ -3,6 +3,8 @@ import { logger } from './logger'
 const REPO_OWNER = 'andreaschiona'
 const REPO_NAME = 'open-llm-wiki'
 
+const GITHUB_TOKEN_KEY = 'open-llm-wiki:github_token'
+
 async function getGitHubToken(): Promise<string | null> {
   try {
     const { useConfigStore } = await import('../../store/useConfigStore')
@@ -19,7 +21,7 @@ async function getGitHubToken(): Promise<string | null> {
     return import.meta.env.VITE_GITHUB_TOKEN as string
   }
   try {
-    return localStorage.getItem('github_token')
+    return localStorage.getItem(GITHUB_TOKEN_KEY)
   } catch {
     return null
   }

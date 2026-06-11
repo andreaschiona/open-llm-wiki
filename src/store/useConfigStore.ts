@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { LLMProviderConfig } from '../types'
 import { ConfigManager } from '../lib/config/configManager'
+import { logger } from '../lib/utils/logger'
 
 const GITHUB_TOKEN_KEY = 'open-llm-wiki:github_token'
 
@@ -100,6 +101,12 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   },
 
   setGitHubToken: (token: string) => {
+    if (token) {
+      logger.warn(
+        'useConfigStore',
+        'GitHub token salvato in localStorage (non sicuro per produzione)',
+      )
+    }
     saveGitHubToken(token)
     set({ githubToken: token })
   },
