@@ -54,6 +54,7 @@ export class ConfigManager {
       defaultModel: FREE_MODELS[0].id,
       models: FREE_MODELS,
       isActive: true,
+      supportedInputs: ['text', 'pdf'],
     }
 
     this.providers = [defaultProvider]
