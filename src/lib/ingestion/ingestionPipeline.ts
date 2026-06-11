@@ -167,7 +167,6 @@ ${concept.description}
         category: p.startsWith('concetti/') ? 'concetti' : targetWiki,
       }))
 
-      // Update only the thematic indice_wiki.md files — indice.md is hand-authored
       const targetEntries = newEntries.filter((e) => e.category === targetWiki)
       if (targetEntries.length > 0) {
         await this.wikiManager.updateThematicWikiIndex(
@@ -184,6 +183,8 @@ ${concept.description}
           concettiEntries,
         )
       }
+
+      await this.wikiManager.updateMainIndex()
 
       this.emit(taskId, 'log', 95, 'Updating change log...')
 

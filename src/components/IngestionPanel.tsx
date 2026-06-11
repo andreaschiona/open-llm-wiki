@@ -78,18 +78,22 @@ export function IngestionPanel() {
       })
 
       const pipeline = createPipeline()
-      if (pipeline) {
-        await pipeline.processRawSource(
-          task.id,
-          result.title,
-          result.content,
-          urlInput,
+      if (!pipeline) {
+        throw new Error(
+          'Provider LLM non configurato. Vai su Settings per configurare un provider con API key.',
         )
       }
+      await pipeline.processRawSource(
+        task.id,
+        result.title,
+        result.content,
+        urlInput,
+      )
 
       setUrlInput('')
       useWikiStore.getState().refreshIndex()
       useWikiStore.getState().refreshTree()
+      useWikiStore.getState().refreshLog()
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error'
       updateIngestionTask(task.id, { status: 'error', error: msg })
@@ -131,18 +135,22 @@ export function IngestionPanel() {
       })
 
       const pipeline = createPipeline()
-      if (pipeline) {
-        await pipeline.processRawSource(
-          task.id,
-          result.title,
-          result.content,
-          fileInput.name,
+      if (!pipeline) {
+        throw new Error(
+          'Provider LLM non configurato. Vai su Settings per configurare un provider con API key.',
         )
       }
+      await pipeline.processRawSource(
+        task.id,
+        result.title,
+        result.content,
+        fileInput.name,
+      )
 
       setFileInput(null)
       useWikiStore.getState().refreshIndex()
       useWikiStore.getState().refreshTree()
+      useWikiStore.getState().refreshLog()
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error'
       updateIngestionTask(task.id, { status: 'error', error: msg })

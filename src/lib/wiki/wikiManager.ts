@@ -325,6 +325,20 @@ ${wikis}
     return this.fileOps.readFile(this.resolvePath('indice.md'))
   }
 
+  async updateMainIndex(): Promise<void> {
+    const indexPath = this.resolvePath('indice.md')
+    try {
+      let content = await this.fileOps.readFile(indexPath)
+      content = content.replace(
+        /Ultimo aggiornamento: .*/,
+        `Ultimo aggiornamento: ${new Date().toISOString().split('T')[0]}`,
+      )
+      await this.fileOps.writeFile(indexPath, content)
+    } catch {
+      await this.fileOps.writeFile(indexPath, this.generateInitialIndex())
+    }
+  }
+
   async updateIndex(content: string): Promise<void> {
     await this.fileOps.writeFile(this.resolvePath('indice.md'), content)
   }
