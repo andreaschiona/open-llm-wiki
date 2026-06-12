@@ -53,10 +53,14 @@ export const useWikiStore = create<WikiState>((set, get) => ({
   navigateToPage: async (path) => {
     const wm = get().wikiManager
     if (!wm) return
-    const page = await wm.readPage(path)
-    if (page) {
-      set({ currentPage: page, currentPath: path })
-      return
+    const tryPaths = [path]
+    if (!path.endsWith('.md')) tryPaths.push(`${path}.md`)
+    for (const p of tryPaths) {
+      const page = await wm.readPage(p)
+      if (page) {
+        set({ currentPage: page, currentPath: p })
+        return
+      }
     }
     try {
       const content = await wm.readFile(path)

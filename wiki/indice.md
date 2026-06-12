@@ -4,17 +4,17 @@ Ultimo aggiornamento: 2026-06-11 — **1 articolo** in 1 sezione
 
 ## Wiki tematiche
 
-### [[ai-news/indice_wiki|AI News]]
+### [AI News](ai-news/indice_wiki.md)
 
 _Nessun articolo in questa sezione._
 
-### [[strumenti-ai/indice_wiki|Strumenti AI]]
+### [Strumenti AI](strumenti-ai/indice_wiki.md)
 
 _Nessun articolo in questa sezione._
 
-### [[concetti/indice_wiki|Concetti]]
+### [Concetti](concetti/indice_wiki.md)
 
-- [[concetti/llm-wiki-pattern|LLM Wiki Pattern]]: Pattern architetturale introdotto da Andrej Karpathy per costruire knowledge base personali gestite da LLM.
+- [LLM Wiki Pattern](concetti/llm-wiki-pattern.md): Pattern architetturale introdotto da Andrej Karpathy per costruire knowledge base personali gestite da LLM.
 
 ---
 

@@ -89,7 +89,7 @@ export class WikiIndex {
       md += entries
         .map(
           (e) =>
-            `- [[${e.path}|${e.title}]]${e.summary ? `: ${e.summary}` : ''}`,
+            `- [${e.title}](${e.path})${e.summary ? `: ${e.summary}` : ''}`,
         )
         .join('\n')
       md += '\n'
