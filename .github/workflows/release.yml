@@ -111,6 +111,9 @@ jobs:
 
       - name: Build Tauri app
         shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           for i in {1..3}; do
             npm run tauri build && break
@@ -123,6 +126,20 @@ jobs:
         shell: pwsh
         run: |
           Compress-Archive -Path src-tauri/target/release/open-llm-wiki.exe -DestinationPath "Open.LLM.Wiki_${{ needs.release.outputs.new_version }}_x64_portable.zip"
+
+      - name: Generate update fragment
+        shell: bash
+        env:
+          ARTIFACTS_DIR: src-tauri/target/release/bundle
+        run: |
+          node .github/scripts/generate-update-json.js v${{ needs.release.outputs.new_version }}
+          cp update.json "update_${{ matrix.os }}.json"
+
+      - name: Upload update fragment
+        uses: actions/upload-artifact@v4
+        with:
+          name: update_${{ matrix.os }}
+          path: update_${{ matrix.os }}.json
 
       - name: Upload release artifacts
         if: success()
@@ -138,15 +155,64 @@ jobs:
             src-tauri/target/release/bundle/**/*.exe
             *.zip
 
+  merge-update:
+    needs: [release, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.release.outputs.new_version }}
+
+      - name: Download all update fragments
+        uses: actions/download-artifact@v4
+        with:
+          pattern: update_*
+          merge-multiple: true
+
+      - name: Merge update fragments
+        shell: bash
+        run: |
+          VERSION="${{ needs.release.outputs.new_version }}"
+          echo '{
+            "version": "'"$VERSION"'",
+            "pub_date": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+            "platforms": {' > update.json
+          first=true
+          for f in update_*.json; do
+            $first || echo "," >> update.json
+            first=false
+            # Extract platform key from filename (update_ubuntu-latest.json -> ubuntu-latest)
+            platform_key=$(echo "$f" | sed 's/^update_//;s/\.json$//')
+            # Map GitHub runner names to Tauri platform keys
+            case "$platform_key" in
+              ubuntu-latest)   plat="linux-x86_64" ;;
+              macos-latest)    plat="darwin-aarch64" ;;
+              windows-latest)  plat="windows-x86_64" ;;
+              *)               plat="$platform_key" ;;
+            esac
+            content=$(cat "$f" | jq '.platforms | to_entries[0].value')
+            echo '    "'"$plat"'": '"$content" >> update.json
+          done
+          echo '  }
+          }' >> update.json
+          jq '.' update.json > update.json.tmp && mv update.json.tmp update.json
+          echo "Merged update.json:"
+          cat update.json
+
+      - name: Upload merged update.json
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: v${{ needs.release.outputs.new_version }}
+          files: update.json
+
       - name: Create issue on failure
         if: failure()
         uses: actions/github-script@v7
         with:
           script: |
-            const os = '${{ matrix.os }}';
             const version = '${{ needs.release.outputs.new_version }}';
             const runUrl = '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}';
-            const title = `Release build failed for ${os} (v${version})`;
+            const title = `Release merge-update failed for v${version}`;
             const body = `## Build Failure
 
             ### Run

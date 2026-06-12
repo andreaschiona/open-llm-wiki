@@ -5,10 +5,20 @@ import { logger } from '../lib/utils/logger'
 interface UpdateState {
   updateInfo: UpdateInfo
   checkForUpdates: () => Promise<void>
+  downloadAndInstall: () => Promise<void>
+  installing: boolean
 }
 
 const GITHUB_API =
   'https://api.github.com/repos/andreaschiona/open-llm-wiki/releases/latest'
+
+function isTauri(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ !==
+      undefined
+  )
+}
 
 async function getCurrentVersion(): Promise<string> {
   try {
@@ -44,8 +54,10 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
     currentVersion: '0.0.0',
     latestVersion: null,
     latestUrl: null,
+    downloadUrl: null,
     status: 'up-to-date',
   },
+  installing: false,
 
   checkForUpdates: async () => {
     set({
@@ -66,6 +78,38 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
         },
       })
 
+      if (isTauri()) {
+        try {
+          const { check } = await import('@tauri-apps/plugin-updater')
+          const update = await check()
+          if (update) {
+            const latestTag = update.version.replace(/^v/, '')
+            set({
+              updateInfo: {
+                currentVersion,
+                latestVersion: latestTag,
+                latestUrl: null,
+                downloadUrl: null,
+                status: 'available',
+              },
+            })
+            return
+          }
+          set({
+            updateInfo: {
+              currentVersion,
+              latestVersion: currentVersion,
+              latestUrl: null,
+              downloadUrl: null,
+              status: 'up-to-date',
+            },
+          })
+          return
+        } catch {
+          logger.warn('useUpdateStore', 'Tauri updater check failed, falling back to GitHub API')
+        }
+      }
+
       const response = await fetch(GITHUB_API)
       if (!response.ok) {
         throw new Error(`GitHub API error: ${response.status}`)
@@ -73,6 +117,9 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
       const data = await response.json()
       const latestTag = ((data.tag_name as string) || '').replace(/^v/, '')
       const latestUrl = (data.html_url as string) || ''
+      const assets: Array<{ name: string; browser_download_url: string }> =
+        data.assets || []
+      const downloadUrl = assets.length > 0 ? assets[0].browser_download_url : null
 
       const isNewer =
         latestTag && compareVersions(latestTag, currentVersion) > 0
@@ -82,6 +129,7 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
           currentVersion,
           latestVersion: latestTag || null,
           latestUrl: latestUrl || null,
+          downloadUrl: downloadUrl,
           status: isNewer ? 'available' : 'up-to-date',
         },
       })
@@ -93,6 +141,52 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
           error: err instanceof Error ? err.message : 'Unknown error',
         },
       })
+    }
+  },
+
+  downloadAndInstall: async () => {
+    set({ installing: true })
+    try {
+      if (isTauri()) {
+        try {
+          const { check, install } = await import('@tauri-apps/plugin-updater')
+          const update = await check()
+          if (update) {
+            set({
+              updateInfo: {
+                ...get().updateInfo,
+                status: 'checking',
+              },
+            })
+            await update.downloadAndInstall()
+            set({
+              updateInfo: {
+                ...get().updateInfo,
+                status: 'up-to-date',
+              },
+              installing: false,
+            })
+            return
+          }
+        } catch (err) {
+          logger.warn('useUpdateStore', 'Tauri updater install failed, falling back to download', err)
+        }
+      }
+
+      const { updateInfo } = get()
+      const url = updateInfo.downloadUrl || updateInfo.latestUrl
+      if (url) {
+        if (isTauri()) {
+          const { open } = await import('@tauri-apps/plugin-shell')
+          await open(url)
+        } else {
+          window.open(url, '_blank')
+        }
+      }
+    } catch (err) {
+      logger.error('useUpdateStore', 'Download failed', err)
+    } finally {
+      set({ installing: false })
     }
   },
 }))
