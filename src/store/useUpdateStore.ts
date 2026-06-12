@@ -106,7 +106,10 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
           })
           return
         } catch {
-          logger.warn('useUpdateStore', 'Tauri updater check failed, falling back to GitHub API')
+          logger.warn(
+            'useUpdateStore',
+            'Tauri updater check failed, falling back to GitHub API',
+          )
         }
       }
 
@@ -119,7 +122,8 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
       const latestUrl = (data.html_url as string) || ''
       const assets: Array<{ name: string; browser_download_url: string }> =
         data.assets || []
-      const downloadUrl = assets.length > 0 ? assets[0].browser_download_url : null
+      const downloadUrl =
+        assets.length > 0 ? assets[0].browser_download_url : null
 
       const isNewer =
         latestTag && compareVersions(latestTag, currentVersion) > 0
@@ -149,7 +153,7 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
     try {
       if (isTauri()) {
         try {
-          const { check, install } = await import('@tauri-apps/plugin-updater')
+          const { check } = await import('@tauri-apps/plugin-updater')
           const update = await check()
           if (update) {
             set({
@@ -169,7 +173,11 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
             return
           }
         } catch (err) {
-          logger.warn('useUpdateStore', 'Tauri updater install failed, falling back to download', err)
+          logger.warn(
+            'useUpdateStore',
+            'Tauri updater install failed, falling back to download',
+            err,
+          )
         }
       }
 
