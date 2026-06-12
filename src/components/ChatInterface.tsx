@@ -5,6 +5,22 @@ import { useConfigStore } from '../store/useConfigStore'
 import { createProvider } from '../lib/llm/providerFactory'
 import { MarkdownRenderer } from './MarkdownRenderer'
 
+const SAFETY_PATTERNS = [
+  /user safety/i,
+  /content.filter/i,
+  /i'm sorry,? i cannot/i,
+  /i cannot (answer|respond|complete)/i,
+  /this (content|request) (violates|has been flagged)/i,
+  /as an ai (assistant|model).*cannot/i,
+  /i am (not able|unable) to/i,
+  /request blocked/i,
+]
+
+function isSafetyBlocked(content: string): boolean {
+  const short = content.length < 120
+  return short && SAFETY_PATTERNS.some((p) => p.test(content))
+}
+
 export function ChatInterface() {
   const { messages, isStreaming, addMessage, clearMessages, setIsStreaming } =
     useChatStore()
@@ -62,6 +78,19 @@ export function ChatInterface() {
       const provider = createProvider(activeConfig)
       const wikiContext = await getContextFromWiki(userMsg)
 
+      if (!wikiContext) {
+        const allEntries = wikiIndex.getEntries()
+        if (allEntries.length === 0) {
+          addMessage({
+            role: 'assistant',
+            content:
+              'Il wiki è vuoto. Aggiungi articoli tramite la sezione Ingestion prima di fare domande.',
+            timestamp: new Date().toISOString(),
+          })
+          return
+        }
+      }
+
       const systemPrompt = `You are a Wiki assistant. Answer questions using the provided wiki context.
 Always cite your sources using [Source: PageName] format.
 If the answer isn't in the context, say so clearly.
@@ -99,10 +128,22 @@ ${wikiContext || 'No relevant wiki pages found.'}`
         },
       )
 
+      const finalContent = response.content
+      if (finalContent && isSafetyBlocked(finalContent)) {
+        const msgs = useChatStore.getState().messages
+        const lastIdx = msgs.length - 1
+        if (lastIdx >= 0 && msgs[lastIdx].role === 'assistant') {
+          msgs[lastIdx].content =
+            "Il provider LLM ha bloccato la risposta per motivi di sicurezza. Prova a riformulare la domanda o verifica che il contenuto del wiki non contenga informazioni problematiche."
+          useChatStore.setState({ messages: [...msgs] })
+        }
+        return
+      }
+
       const finalMessages = useChatStore.getState().messages
       const lastIdx = finalMessages.length - 1
       if (lastIdx >= 0 && finalMessages[lastIdx].role === 'assistant') {
-        finalMessages[lastIdx].content = response.content
+        finalMessages[lastIdx].content = finalContent
         useChatStore.setState({ messages: [...finalMessages] })
       }
     } catch (err) {
