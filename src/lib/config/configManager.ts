@@ -14,6 +14,8 @@ interface FileOps {
 export class ConfigManager {
   private providers: LLMProviderConfig[] = []
   private activeProviderId: string | null = null
+  private workDir: string = ''
+  private githubToken: string = ''
   private fileOps: FileOps
 
   constructor(fileOps: FileOps) {
@@ -32,6 +34,8 @@ export class ConfigManager {
         const parsed = JSON.parse(data)
         this.providers = parsed.providers || []
         this.activeProviderId = parsed.activeProviderId || null
+        this.workDir = parsed.workDir || ''
+        this.githubToken = parsed.githubToken || ''
       } catch (err) {
         logger.error('ConfigManager', 'Failed to load config', err)
         await this.createDefault()
@@ -67,11 +71,31 @@ export class ConfigManager {
       {
         providers: this.providers,
         activeProviderId: this.activeProviderId,
+        workDir: this.workDir,
+        githubToken: this.githubToken,
       },
       null,
       2,
     )
     await this.fileOps.writeFile(CONFIG_PATH, data)
+  }
+
+  getWorkDir(): string {
+    return this.workDir
+  }
+
+  getGitHubToken(): string {
+    return this.githubToken
+  }
+
+  async setWorkDir(dir: string): Promise<void> {
+    this.workDir = dir
+    await this.save()
+  }
+
+  async setGitHubToken(token: string): Promise<void> {
+    this.githubToken = token
+    await this.save()
   }
 
   getProviders(): LLMProviderConfig[] {

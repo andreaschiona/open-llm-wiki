@@ -23,8 +23,8 @@ interface ConfigState {
   removeProvider: (id: string) => Promise<void>
   setActiveProvider: (id: string) => Promise<void>
   getActiveProvider: () => LLMProviderConfig | undefined
-  setGitHubToken: (token: string) => void
-  setWorkDir: (dir: string) => void
+  setGitHubToken: (token: string) => Promise<void>
+  setWorkDir: (dir: string) => Promise<void>
 }
 
 function loadGitHubToken(): string {
@@ -72,16 +72,21 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   providers: [],
   activeProviderId: null,
   initialized: false,
-  githubToken: loadGitHubToken(),
-  workDir: loadWorkDir(),
+  githubToken: '',
+  workDir: '',
 
   init: async (fileOps) => {
     const cm = new ConfigManager(fileOps)
     await cm.init()
+    // Prefer filesystem config, fall back to localStorage for backward compat
+    const token = cm.getGitHubToken() || loadGitHubToken()
+    const dir = cm.getWorkDir() || loadWorkDir()
     set({
       configManager: cm,
       providers: cm.getProviders(),
       activeProviderId: cm.getActiveProvider()?.id || null,
+      githubToken: token,
+      workDir: dir,
       initialized: true,
     })
   },
@@ -125,18 +130,26 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
     return providers.find((p) => p.id === activeProviderId)
   },
 
-  setGitHubToken: (token: string) => {
+  setGitHubToken: async (token: string) => {
     if (token) {
       logger.warn(
         'useConfigStore',
         'GitHub token salvato in localStorage (non sicuro per produzione)',
       )
     }
+    const cm = get().configManager
+    if (cm) {
+      await cm.setGitHubToken(token)
+    }
     saveGitHubToken(token)
     set({ githubToken: token })
   },
 
-  setWorkDir: (dir: string) => {
+  setWorkDir: async (dir: string) => {
+    const cm = get().configManager
+    if (cm) {
+      await cm.setWorkDir(dir)
+    }
     saveWorkDir(dir)
     set({ workDir: dir })
   },
