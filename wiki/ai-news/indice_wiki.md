@@ -2,6 +2,6 @@
 
 Notizie, aggiornamenti e sviluppi nel mondo dell'intelligenza artificiale. Include lanci di modelli, benchmark, policy e tendenze di mercato.
 
-## Articoli
+## Generale
 
 _Nessun articolo ancora. Usa `ingest` per aggiungere nuove fonti._

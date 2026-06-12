@@ -200,7 +200,7 @@ ${
           pathToTitle.get(p) || p.split('/').pop()?.replace('.md', '') || '',
         path: p,
         summary: '',
-        tags: [] as string[],
+        tags: [...analysis.tags],
         updated: new Date().toISOString(),
         category: p.startsWith('concetti/') ? 'concetti' : targetWiki,
       }))
@@ -362,7 +362,10 @@ Rules:
     const bodyStart = existingLines.findIndex(
       (l) => l.startsWith('# ') || l.startsWith('## Overview'),
     )
-    const existingBody = bodyStart >= 0 ? existingLines.slice(bodyStart).join('\n') : existingContent
+    const existingBody =
+      bodyStart >= 0
+        ? existingLines.slice(bodyStart).join('\n')
+        : existingContent
 
     const mergePrompt = `You are merging new information into an existing wiki concept page.
 
@@ -395,9 +398,7 @@ Return ONLY a merged markdown "## Overview" section that:
     const fontiIdx = lines.findIndex((l) => l === '## Fonti')
 
     const updatedDate = today
-    const dateLine = lines.findIndex(
-      (l) => l.startsWith('data_aggiornamento:'),
-    )
+    const dateLine = lines.findIndex((l) => l.startsWith('data_aggiornamento:'))
     if (dateLine >= 0) {
       lines[dateLine] = `data_aggiornamento: ${updatedDate}`
     }
@@ -410,10 +411,7 @@ Return ONLY a merged markdown "## Overview" section that:
       const fontiEnd = lines.length
       let insertAt = -1
       for (let i = lines.length - 1; i >= 0; i--) {
-        if (
-          lines[i].startsWith('  - raw/') ||
-          lines[i].startsWith('- raw/')
-        ) {
+        if (lines[i].startsWith('  - raw/') || lines[i].startsWith('- raw/')) {
           insertAt = i
           break
         }
@@ -483,11 +481,7 @@ Return ONLY a merged markdown "## Overview" section that:
       if (correlatiIdx >= 0) {
         lines.splice(correlatiIdx + 1, 0, newLink)
       } else if (fontiIdx >= 0) {
-        lines.splice(
-          fontiIdx,
-          0,
-          `\n## Articoli correlati\n\n${newLink}\n`,
-        )
+        lines.splice(fontiIdx, 0, `\n## Articoli correlati\n\n${newLink}\n`)
       } else {
         lines.push(`\n## Articoli correlati\n\n${newLink}\n`)
       }

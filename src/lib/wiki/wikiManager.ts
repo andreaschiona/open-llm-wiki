@@ -417,7 +417,7 @@ ${sections.join('\n\n')}
         `Updated ${indexPath} with ${newEntries.length} new entries`,
       )
     } catch {
-      // File doesn't exist yet — create it with just the Articoli section
+      // File doesn't exist yet — create it with dynamic sections
       const wi = new WikiIndex()
       for (const e of newEntries) {
         wi.addEntry(e)

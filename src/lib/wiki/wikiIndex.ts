@@ -5,102 +5,144 @@ export class WikiIndex {
 
   constructor() {}
 
-  /**
-   * Parse entries from a thematic indice_wiki.md, replacing all existing entries.
-   * Category is set to the provided wiki slug (e.g. "ai-news") so it round-trips
-   * correctly without going through a display-label transformation.
-   */
   fromMarkdown(content: string, wikiSlug?: string): void {
     this.entries = []
     this.addFromMarkdown(content, wikiSlug)
   }
 
-  /**
-   * Append entries parsed from a thematic indice_wiki.md without clearing existing entries.
-   */
   addFromMarkdown(content: string, wikiSlug?: string): void {
-    let inArticoli = false
+    let inSection = false
     const lines = content.split('\n')
     for (const line of lines) {
-      // Detect ## Articoli section
-      if (/^##\s+Articoli/.test(line)) {
-        inArticoli = true
+      if (/^##\s+/.test(line)) {
+        inSection = true
         continue
       }
-      // Any other ## heading ends the Articoli section
-      if (/^##\s+/.test(line) && inArticoli) {
-        inArticoli = false
-        continue
-      }
-      if (!inArticoli) continue
+      if (!inSection) continue
 
-      // Parse [[path|label]] syntax
-      const wikiLinkMatch = line.match(
-        /^\s*[-*]\s+\[\[([^\]]+)\|([^\]]+)\]\]\s*[:-]?\s*(.*)/,
-      )
-      if (wikiLinkMatch) {
-        this.entries.push({
-          title: wikiLinkMatch[2].trim(),
-          path: wikiLinkMatch[1].trim(),
-          category: wikiSlug ?? wikiLinkMatch[1].split('/')[0],
-          summary: wikiLinkMatch[3] || '',
-          tags: [],
-          updated: new Date().toISOString(),
-        })
-        continue
-      }
-      // Parse [title](path) syntax (legacy fallback)
-      const mdLinkMatch = line.match(
-        /^\s*[-*]\s+\[([^\]]+)\]\(([^)]+)\)\s*[:-]?\s*(.*)/,
-      )
-      if (mdLinkMatch) {
-        this.entries.push({
-          title: mdLinkMatch[1].trim(),
-          path: mdLinkMatch[2].trim(),
-          category: wikiSlug ?? mdLinkMatch[2].split('/')[0],
-          summary: mdLinkMatch[3] || '',
-          tags: [],
-          updated: new Date().toISOString(),
-        })
+      const entry = this.parseEntryLine(line, wikiSlug)
+      if (entry) {
+        this.addEntry(entry)
       }
     }
   }
 
-  /**
-   * Regenerate the "## Articoli" section of a thematic indice_wiki.md,
-   * preserving any existing intro paragraph (everything before ## Articoli).
-   *
-   * If the file has no ## Articoli section yet, it is appended.
-   */
+  private parseEntryLine(
+    line: string,
+    wikiSlug?: string,
+  ): WikiIndexEntry | null {
+    const wikiLinkMatch = line.match(
+      /^\s*[-*]\s+\[\[([^\]]+)\|([^\]]+)\]\]\s*[:-]?\s*(.*)/,
+    )
+    if (wikiLinkMatch) {
+      const rest = wikiLinkMatch[3] || ''
+      const { summary, tags } = this.parseEntryMetadata(rest)
+      return {
+        title: wikiLinkMatch[2].trim(),
+        path: wikiLinkMatch[1].trim(),
+        category: wikiSlug ?? wikiLinkMatch[1].split('/')[0],
+        summary,
+        tags,
+        updated: new Date().toISOString(),
+      }
+    }
+
+    const mdLinkMatch = line.match(
+      /^\s*[-*]\s+\[([^\]]+)\]\(([^)]+)\)\s*[:-]?\s*(.*)/,
+    )
+    if (mdLinkMatch) {
+      const rest = mdLinkMatch[3] || ''
+      const { summary, tags } = this.parseEntryMetadata(rest)
+      return {
+        title: mdLinkMatch[1].trim(),
+        path: mdLinkMatch[2].trim(),
+        category: wikiSlug ?? mdLinkMatch[2].split('/')[0],
+        summary,
+        tags,
+        updated: new Date().toISOString(),
+      }
+    }
+
+    return null
+  }
+
+  private parseEntryMetadata(rest: string): {
+    summary: string
+    tags: string[]
+  } {
+    const tagMatch = rest.match(/`tags:\s*(.+?)`\s*$/)
+    if (tagMatch) {
+      const summary = rest.slice(0, tagMatch.index).trim()
+      const tags = tagMatch[1]
+        .split(',')
+        .map((t) => t.trim().toLowerCase())
+        .filter(Boolean)
+      return { summary, tags }
+    }
+    return { summary: rest.trim(), tags: [] }
+  }
+
   updateThematicSection(
     existingContent: string,
     entries: WikiIndexEntry[],
   ): string {
-    // Split at the first ## Articoli heading
-    const articoliIdx = existingContent.search(/^## Articoli/m)
+    const sectionIdx = existingContent.search(/^##\s+/m)
     const preamble =
-      articoliIdx >= 0
-        ? existingContent.slice(0, articoliIdx).trimEnd()
+      sectionIdx >= 0
+        ? existingContent.slice(0, sectionIdx).trimEnd()
         : existingContent.trimEnd()
 
-    const section = this.renderArticoliSection(entries)
+    const section = this.renderDynamicSections(entries)
     return `${preamble}\n\n${section}`
   }
 
-  private renderArticoliSection(entries: WikiIndexEntry[]): string {
-    let md = '## Articoli\n\n'
+  private renderDynamicSections(entries: WikiIndexEntry[]): string {
     if (entries.length === 0) {
-      md +=
-        '_Nessun articolo ancora. Usa `ingest` per aggiungere nuove fonti._\n'
-    } else {
-      md += entries
-        .map(
-          (e) =>
-            `- [${e.title}](${e.path})${e.summary ? `: ${e.summary}` : ''}`,
-        )
-        .join('\n')
-      md += '\n'
+      return '## Generale\n\n_Nessun articolo ancora. Usa `ingest` per aggiungere nuove fonti._\n'
     }
+
+    const tagMap = new Map<string, Set<WikiIndexEntry>>()
+    const noTagEntries: WikiIndexEntry[] = []
+
+    for (const e of entries) {
+      if (e.tags.length === 0) {
+        noTagEntries.push(e)
+      } else {
+        for (const tag of e.tags) {
+          if (!tagMap.has(tag)) {
+            tagMap.set(tag, new Set())
+          }
+          tagMap.get(tag)!.add(e)
+        }
+      }
+    }
+
+    const parts: string[] = []
+
+    const sortedTags = [...tagMap.keys()].sort()
+    for (const tag of sortedTags) {
+      const tagEntries = [...tagMap.get(tag)!]
+      parts.push(this.renderTagSection(tag, tagEntries))
+    }
+
+    if (noTagEntries.length > 0) {
+      parts.push(this.renderTagSection('generale', noTagEntries))
+    }
+
+    return parts.join('\n')
+  }
+
+  private renderTagSection(tag: string, entries: WikiIndexEntry[]): string {
+    const sectionName = tag.charAt(0).toUpperCase() + tag.slice(1)
+    let md = `## ${sectionName}\n\n`
+    md += entries
+      .map((e) => {
+        const tagStr =
+          e.tags.length > 0 ? ` \`tags: ${e.tags.join(', ')}\`` : ''
+        return `- [${e.title}](${e.path})${e.summary ? `: ${e.summary}${tagStr}` : tagStr}`
+      })
+      .join('\n')
+    md += '\n'
     return md
   }
 
@@ -123,24 +165,131 @@ export class WikiIndex {
 
   search(term: string): WikiIndexEntry[] {
     const stopWords = new Set([
-      'di', 'che', 'e', 'a', 'il', 'la', 'le', 'gli', 'lo', 'i',
-      'un', 'una', 'uno', 'per', 'con', 'su', 'in', 'da', 'non',
-      'si', 'ci', 'vi', 'ne', 'mi', 'ti', 'li', 'ha', 'ho', 'hai',
-      'hanno', 'ha', 'sono', 'era', 'stato', 'sta', 'stanno',
-      'del', 'della', 'delle', 'degli', 'dei', 'dello',
-      'al', 'alla', 'alle', 'agli', 'allo', 'ai',
-      'dal', 'dalla', 'dalle', 'dagli', 'dallo', 'dai',
-      'nel', 'nella', 'nelle', 'negli', 'nello', 'nei',
-      'sul', 'sulla', 'sulle', 'sugli', 'sullo', 'sui',
-      'cosa', 'come', 'quale', 'quali', 'quanto', 'quanta',
-      'chi', 'cui', 'dove', 'quando', 'perche', 'perché',
-      'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at',
-      'to', 'for', 'of', 'by', 'with', 'from', 'is', 'are',
-      'was', 'were', 'be', 'been', 'being', 'have', 'has',
-      'had', 'do', 'does', 'did', 'will', 'would', 'could',
-      'should', 'may', 'might', 'shall', 'can',
-      'this', 'that', 'these', 'those', 'it', 'its',
-      'what', 'which', 'who', 'whom', 'how', 'why',
+      'di',
+      'che',
+      'e',
+      'a',
+      'il',
+      'la',
+      'le',
+      'gli',
+      'lo',
+      'i',
+      'un',
+      'una',
+      'uno',
+      'per',
+      'con',
+      'su',
+      'in',
+      'da',
+      'non',
+      'si',
+      'ci',
+      'vi',
+      'ne',
+      'mi',
+      'ti',
+      'li',
+      'ha',
+      'ho',
+      'hai',
+      'hanno',
+      'ha',
+      'sono',
+      'era',
+      'stato',
+      'sta',
+      'stanno',
+      'del',
+      'della',
+      'delle',
+      'degli',
+      'dello',
+      'al',
+      'alla',
+      'alle',
+      'agli',
+      'allo',
+      'ai',
+      'dal',
+      'dalla',
+      'dalle',
+      'dagli',
+      'dallo',
+      'dai',
+      'nel',
+      'nella',
+      'nelle',
+      'negli',
+      'nello',
+      'nei',
+      'sul',
+      'sulla',
+      'sulle',
+      'sugli',
+      'sullo',
+      'sui',
+      'cosa',
+      'come',
+      'quale',
+      'quali',
+      'quanto',
+      'quanta',
+      'chi',
+      'cui',
+      'dove',
+      'quando',
+      'perche',
+      'perché',
+      'the',
+      'a',
+      'an',
+      'and',
+      'or',
+      'but',
+      'in',
+      'on',
+      'at',
+      'to',
+      'for',
+      'of',
+      'by',
+      'with',
+      'from',
+      'is',
+      'are',
+      'was',
+      'were',
+      'be',
+      'been',
+      'being',
+      'have',
+      'has',
+      'had',
+      'do',
+      'does',
+      'did',
+      'will',
+      'would',
+      'could',
+      'should',
+      'may',
+      'might',
+      'shall',
+      'can',
+      'this',
+      'that',
+      'these',
+      'those',
+      'it',
+      'its',
+      'what',
+      'which',
+      'who',
+      'whom',
+      'how',
+      'why',
     ])
 
     const keywords = term
