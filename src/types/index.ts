@@ -78,6 +78,7 @@ export interface UpdateInfo {
   currentVersion: string
   latestVersion: string | null
   latestUrl: string | null
+  downloadUrl: string | null
   status: UpdateStatus
   error?: string
 }

@@ -43,6 +43,8 @@ export function SettingsPanel() {
 
   const updateInfo = useUpdateStore((s) => s.updateInfo)
   const checkForUpdates = useUpdateStore((s) => s.checkForUpdates)
+  const downloadAndInstall = useUpdateStore((s) => s.downloadAndInstall)
+  const installing = useUpdateStore((s) => s.installing)
 
   const [editing, setEditing] = useState<LLMProviderConfig | null>(null)
   const [showNew, setShowNew] = useState(false)
@@ -118,8 +120,8 @@ export function SettingsPanel() {
 
   const [workDirSaved, setWorkDirSaved] = useState(false)
 
-  const handleSaveToken = () => {
-    setGitHubToken(tokenDraft)
+  const handleSaveToken = async () => {
+    await setGitHubToken(tokenDraft)
     setTokenSaved(true)
     setTimeout(() => setTokenSaved(false), 2000)
   }
@@ -130,7 +132,7 @@ export function SettingsPanel() {
       const { open } = await import('@tauri-apps/plugin-dialog')
       const selected = await open({ directory: true, multiple: false })
       if (selected && typeof selected === 'string') {
-        setWorkDir(selected)
+        await setWorkDir(selected)
         setWorkDirSaved(true)
         setTimeout(() => setWorkDirSaved(false), 2000)
       }
@@ -139,8 +141,8 @@ export function SettingsPanel() {
     }
   }
 
-  const handleResetWorkDir = () => {
-    setWorkDir('')
+  const handleResetWorkDir = async () => {
+    await setWorkDir('')
     setWorkDirSaved(true)
     setTimeout(() => setWorkDirSaved(false), 2000)
   }
@@ -370,19 +372,14 @@ export function SettingsPanel() {
           {updateInfo.status === 'available' && (
             <div className="version-status available">
               <span>Update available: {updateInfo.latestVersion}</span>
-              {updateInfo.latestUrl && (
-                <a
-                  href={updateInfo.latestUrl}
+              {(updateInfo.downloadUrl || updateInfo.latestUrl) && (
+                <button
                   className="btn btn-small"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    window.open(updateInfo.latestUrl!, '_blank')
-                  }}
+                  onClick={downloadAndInstall}
+                  disabled={installing}
                 >
-                  Download
-                </a>
+                  {installing ? 'Installing...' : 'Download'}
+                </button>
               )}
             </div>
           )}

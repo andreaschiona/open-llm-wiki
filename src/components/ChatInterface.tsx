@@ -134,7 +134,7 @@ ${wikiContext || 'No relevant wiki pages found.'}`
         const lastIdx = msgs.length - 1
         if (lastIdx >= 0 && msgs[lastIdx].role === 'assistant') {
           msgs[lastIdx].content =
-            "Il provider LLM ha bloccato la risposta per motivi di sicurezza. Prova a riformulare la domanda o verifica che il contenuto del wiki non contenga informazioni problematiche."
+            'Il provider LLM ha bloccato la risposta per motivi di sicurezza. Prova a riformulare la domanda o verifica che il contenuto del wiki non contenga informazioni problematiche.'
           useChatStore.setState({ messages: [...msgs] })
         }
         return
