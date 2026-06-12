@@ -89,6 +89,7 @@ export class WikiManager {
     if (!(await this.fileOps.fileExists(logMd))) {
       await this.fileOps.writeFile(logMd, '# Wiki Log\n\n')
     }
+    await this.updateMainIndex()
     logger.info('WikiManager', 'Wiki initialized with thematic wiki structure')
   }
 
@@ -98,7 +99,7 @@ export class WikiManager {
         const label = w
           .replace(/-/g, ' ')
           .replace(/\b\w/g, (c) => c.toUpperCase())
-        return `### [[${w}/indice_wiki|${label}]]\n_Ancora nessun articolo. Usa \`ingest\` per aggiungere contenuti._`
+        return `### [${label}](${w}/indice_wiki.md)\n_Ancora nessun articolo. Usa \`ingest\` per aggiungere contenuti._`
       })
       .join('\n\n')
     return `# Wiki Index
@@ -334,7 +335,15 @@ ${wikis}
       for (const wiki of this.thematicWikis) {
         const files = await this.listWikiFiles(wiki)
         const articles = files.filter((f) => f !== 'indice_wiki.md')
-        if (articles.length === 0) continue
+        if (articles.length === 0) {
+          const label = wiki
+            .replace(/-/g, ' ')
+            .replace(/\b\w/g, (c) => c.toUpperCase())
+          sections.push(
+            `### [${label}](${wiki}/indice_wiki.md)\n\n_Nessun articolo in questa sezione._`,
+          )
+          continue
+        }
 
         const label = wiki
           .replace(/-/g, ' ')
@@ -354,13 +363,13 @@ ${wikis}
                 ?.trim() || ''
             : ''
           articleLines.push(
-            `- [[${pagePath}|${displayName}]]${summary ? `: ${summary.slice(0, 120)}` : ''}`,
+            `- [${displayName}](${pagePath})${summary ? `: ${summary.slice(0, 120)}` : ''}`,
           )
           totalArticles++
         }
 
         sections.push(
-          `### [[${wiki}/indice_wiki|${label}]]\n\n${articleLines.join('\n')}`,
+          `### [${label}](${wiki}/indice_wiki.md)\n\n${articleLines.join('\n')}`,
         )
       }
 
