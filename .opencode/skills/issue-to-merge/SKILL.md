@@ -138,6 +138,7 @@ Merge the PR and close the issue.
 ## Verification
 
 Before finishing each phase, confirm:
+
 - Did I follow the exact phase procedure?
 - Did I use the correct branch?
 - Did I avoid committing secrets?

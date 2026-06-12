@@ -173,13 +173,14 @@ jobs:
         shell: bash
         run: |
           VERSION="${{ needs.release.outputs.new_version }}"
+          PUB_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           echo '{
             "version": "'"$VERSION"'",
-            "pub_date": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+            "pub_date": "'"$PUB_DATE"'",
             "platforms": {' > update.json
           first=true
           for f in update_*.json; do
-            $first || echo "," >> update.json
+            "$first" || echo "," >> update.json
             first=false
             # Extract platform key from filename (update_ubuntu-latest.json -> ubuntu-latest)
             platform_key=$(echo "$f" | sed 's/^update_//;s/\.json$//')
