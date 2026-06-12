@@ -6,12 +6,19 @@ export class WikiIndex {
   constructor() {}
 
   /**
-   * Parse entries from a thematic indice_wiki.md.
+   * Parse entries from a thematic indice_wiki.md, replacing all existing entries.
    * Category is set to the provided wiki slug (e.g. "ai-news") so it round-trips
    * correctly without going through a display-label transformation.
    */
   fromMarkdown(content: string, wikiSlug?: string): void {
     this.entries = []
+    this.addFromMarkdown(content, wikiSlug)
+  }
+
+  /**
+   * Append entries parsed from a thematic indice_wiki.md without clearing existing entries.
+   */
+  addFromMarkdown(content: string, wikiSlug?: string): void {
     let inArticoli = false
     const lines = content.split('\n')
     for (const line of lines) {

@@ -39,7 +39,15 @@ export const useWikiStore = create<WikiState>((set, get) => ({
     const indexContent = await wm.getIndex()
     const logContent = await wm.getLog()
     const wi = new WikiIndex()
-    wi.fromMarkdown(indexContent)
+    const thematicWikis = ['ai-news', 'strumenti-ai', 'concetti']
+    for (const wiki of thematicWikis) {
+      try {
+        const content = await wm.readFile(`wiki/${wiki}/indice_wiki.md`)
+        wi.addFromMarkdown(content, wiki)
+      } catch {
+        /* thematic index not yet created */
+      }
+    }
     set({
       wikiManager: wm,
       wikiIndex: wi,
@@ -98,7 +106,15 @@ export const useWikiStore = create<WikiState>((set, get) => ({
     if (!wm) return
     const indexContent = await wm.getIndex()
     const wi = new WikiIndex()
-    wi.fromMarkdown(indexContent)
+    const thematicWikis = ['ai-news', 'strumenti-ai', 'concetti']
+    for (const wiki of thematicWikis) {
+      try {
+        const content = await wm.readFile(`wiki/${wiki}/indice_wiki.md`)
+        wi.addFromMarkdown(content, wiki)
+      } catch {
+        /* thematic index not yet created */
+      }
+    }
     set({ indexContent, wikiIndex: wi })
   },
 
