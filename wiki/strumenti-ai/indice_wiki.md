@@ -2,6 +2,6 @@
 
 Tool, framework, piattaforme e servizi AI. Include IDE, CLI, librerie e piattaforme cloud.
 
-## Articoli
+## Generale
 
 _Nessun articolo ancora. Usa `ingest` per aggiungere nuove fonti._
