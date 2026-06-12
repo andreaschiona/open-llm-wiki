@@ -191,7 +191,7 @@ jobs:
               windows-latest)  plat="windows-x86_64" ;;
               *)               plat="$platform_key" ;;
             esac
-            content=$(cat "$f" | jq '.platforms | to_entries[0].value')
+            content=$(jq '.platforms | to_entries[0].value' "$f")
             echo '    "'"$plat"'": '"$content" >> update.json
           done
           echo '  }
