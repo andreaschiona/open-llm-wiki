@@ -50,7 +50,8 @@ function scanDir(dir) {
           if (signature) {
             platforms[key] = { signature, url: `${baseUrl}/${item}` }
           } else {
-            console.warn(`No signature found for ${item}, skipping updater entry`)
+            console.warn(`No signature found for ${item}, using unsigned entry`)
+            platforms[key] = { signature: null, url: `${baseUrl}/${item}` }
           }
         }
       }
