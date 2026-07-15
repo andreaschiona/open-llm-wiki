@@ -135,11 +135,13 @@ ${wikis}
 
   async deletePage(path: string): Promise<void> {
     const fullPath = path.startsWith('wiki/') ? path : this.resolvePath(path)
-    if (this.fileOps.deleteFile) {
-      await this.fileOps.deleteFile(fullPath)
-    } else {
-      await this.fileOps.writeFile(fullPath, '')
+    if (!this.fileOps.deleteFile) {
+      throw new Error(
+        'deletePage: FileOps.deleteFile non disponibile. ' +
+          'La cancellazione richiede un backend Tauri.',
+      )
     }
+    await this.fileOps.deleteFile(fullPath)
     logger.info('WikiManager', `Deleted page: ${path}`)
   }
 
@@ -455,11 +457,13 @@ ${sections.join('\n\n')}
 
   async deleteRawFile(category: string, filename: string): Promise<void> {
     const path = this.resolveRaw(`${category}/${filename}`)
-    if (this.fileOps.deleteFile) {
-      await this.fileOps.deleteFile(path)
-    } else {
-      await this.fileOps.writeFile(path, '')
+    if (!this.fileOps.deleteFile) {
+      throw new Error(
+        'deleteRawFile: FileOps.deleteFile non disponibile. ' +
+          'La cancellazione richiede un backend Tauri.',
+      )
     }
+    await this.fileOps.deleteFile(path)
   }
 
   async listRawFiles(category?: string): Promise<string[]> {
@@ -547,19 +551,33 @@ ${sections.join('\n\n')}
         }
       }
       try {
-        const entries = await this.fileOps.listDir(root)
-        for (const entry of entries) {
-          const fullPath = `${root}/${entry}`
-          if (this.fileOps.deleteFile) {
-            await this.fileOps.deleteFile(fullPath)
-          }
-        }
+        await this.deleteDirRecursive(root)
       } catch {
         /* skip */
       }
     }
     await this.init()
     logger.info('WikiManager', 'All wiki, raw, and query data cleared')
+  }
+
+  /**
+   * Recursively delete all files and directories under the given path.
+   * Used as a fallback when FileOps.deleteDir is not available.
+   */
+  private async deleteDirRecursive(dir: string): Promise<void> {
+    const entries = await this.fileOps.listDir(dir)
+    for (const entry of entries) {
+      const fullPath = `${dir}/${entry}`
+      try {
+        // Try as file first
+        if (this.fileOps.deleteFile) {
+          await this.fileOps.deleteFile(fullPath)
+        }
+      } catch {
+        // Not a file, try as subdirectory
+        await this.deleteDirRecursive(fullPath)
+      }
+    }
   }
 
   private parseMeta(content: string, path: string): PageMeta {
