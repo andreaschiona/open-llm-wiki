@@ -9,6 +9,7 @@ export class OllamaProvider implements LLMProvider {
 
   private baseUrl: string
   private defaultModel: string
+  private apiKey: string | undefined
 
   constructor(config: {
     baseUrl: string
@@ -20,12 +21,23 @@ export class OllamaProvider implements LLMProvider {
       '',
     )
     this.defaultModel = config.defaultModel || 'llama3.2'
+    this.apiKey = config.apiKey
+  }
+
+  private getHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+    if (this.apiKey) {
+      headers['Authorization'] = `Bearer ${this.apiKey}`
+    }
+    return headers
   }
 
   private async request(endpoint: string, body: unknown): Promise<Response> {
     return fetch(`${this.baseUrl}${endpoint}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: this.getHeaders(),
       body: JSON.stringify(body),
     })
   }
@@ -101,7 +113,11 @@ export class OllamaProvider implements LLMProvider {
 
   async listModels(): Promise<LLMModel[]> {
     try {
-      const res = await fetch(`${this.baseUrl}/api/tags`)
+      const res = await fetch(`${this.baseUrl}/api/tags`, {
+        headers: {
+          ...(this.apiKey ? { 'Authorization': `Bearer ${this.apiKey}` } : {}),
+        },
+      })
       if (!res.ok) return []
       const data = await res.json()
       return (data.models || []).map((m: { name: string }) => ({
