@@ -31,6 +31,44 @@ describe('UrlIngestor.validateUrl', () => {
     expect(() => UrlIngestor.validateUrl('http://169.254.1.1')).toThrow()
   })
 
+  it('should reject numeric IP representations (SSRF bypasses)', () => {
+    // Decimal integer: 2130706433 = 127.0.0.1
+    expect(() => UrlIngestor.validateUrl('http://2130706433/')).toThrow()
+    // Hex: 0x7f000001 = 127.0.0.1
+    expect(() => UrlIngestor.validateUrl('http://0x7f000001/')).toThrow()
+    // Octal: 0177.0.0.1 = 127.0.0.1
+    expect(() => UrlIngestor.validateUrl('http://0177.0.0.1/')).toThrow()
+    // 2-part shorthand: 127.1 = 127.0.0.1
+    expect(() => UrlIngestor.validateUrl('http://127.1/')).toThrow()
+    // 3-part shorthand: 127.0.1 = 127.0.0.1
+    expect(() => UrlIngestor.validateUrl('http://127.0.1/')).toThrow()
+    // Bare 0 = 0.0.0.0 (bound to all interfaces, blocked as private)
+    expect(() => UrlIngestor.validateUrl('http://0/')).toThrow()
+  })
+
+  it('should reject IPv6-mapped IPv4 addresses', () => {
+    // IPv4-mapped IPv6 dotted-decimal
+    expect(() =>
+      UrlIngestor.validateUrl('http://[::ffff:127.0.0.1]:8080'),
+    ).toThrow()
+    // IPv4-mapped IPv6 hex notation
+    expect(() =>
+      UrlIngestor.validateUrl('http://[::ffff:7f00:1]:8080'),
+    ).toThrow()
+    // IPv4-mapped private 10.x.x.x
+    expect(() =>
+      UrlIngestor.validateUrl('http://[::ffff:10.0.0.5]/'),
+    ).toThrow()
+    // IPv6 ULA
+    expect(() => UrlIngestor.validateUrl('http://[fc00::1]/')).toThrow()
+    // IPv6 link-local
+    expect(() => UrlIngestor.validateUrl('http://[fe80::1]/')).toThrow()
+  })
+
+  it('should reject 0.0.0.0', () => {
+    expect(() => UrlIngestor.validateUrl('http://0.0.0.0:8000/')).toThrow()
+  })
+
   it('should reject internal hostnames', () => {
     expect(() => UrlIngestor.validateUrl('http://myhost.local')).toThrow()
     expect(() =>
@@ -39,6 +77,7 @@ describe('UrlIngestor.validateUrl', () => {
     expect(() =>
       UrlIngestor.validateUrl('http://host.docker.internal:8080'),
     ).toThrow()
+    expect(() => UrlIngestor.validateUrl('http://service.consul/')).toThrow()
   })
 
   it('should reject invalid URL strings', () => {
