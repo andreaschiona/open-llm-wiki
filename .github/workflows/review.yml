@@ -33,7 +33,7 @@ jobs:
             core.setOutput('pr_url', pr.html_url);
 
       - name: Checkout PR branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: refs/pull/${{ steps.pr_info.outputs.pr_number }}/head
           fetch-depth: 0
