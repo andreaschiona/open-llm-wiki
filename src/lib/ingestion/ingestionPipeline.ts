@@ -486,13 +486,14 @@ Return ONLY a merged markdown "## Overview" section that:
         lines.push(`\n## Articoli correlati\n\n${newLink}\n`)
       }
 
-      const updatedContent = lines.join('\n')
       const dateLine = lines.findIndex((l) =>
         l.startsWith('data_aggiornamento:'),
       )
       if (dateLine >= 0) {
         lines[dateLine] = `data_aggiornamento: ${today}`
       }
+
+      const updatedContent = lines.join('\n')
 
       await this.wikiManager.writePage(f, updatedContent)
     }
