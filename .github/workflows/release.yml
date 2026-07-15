@@ -132,7 +132,7 @@ jobs:
         env:
           ARTIFACTS_DIR: src-tauri/target/release/bundle
         run: |
-          node .github/scripts/generate-update-json.js v${{ needs.release.outputs.new_version }}
+          node .github/scripts/generate-update-json.cjs v${{ needs.release.outputs.new_version }}
           cp update.json "update_${{ matrix.os }}.json"
 
       - name: Upload update fragment
