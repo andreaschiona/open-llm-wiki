@@ -16,7 +16,7 @@
     "@tauri-apps/plugin-shell": "^2.3.5",
     "@tauri-apps/plugin-updater": "^2.10.1",
     "fuse.js": "^7.0.0",
-    "pdfjs-dist": "^4.0.379",
+    "pdfjs-dist": "^6.1.200",
     "react": "^19.2.7",
     "react-dom": "^18.3.1",
     "react-markdown": "^10.1.0",
