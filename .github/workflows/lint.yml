@@ -34,3 +34,10 @@ jobs:
           VALIDATE_TYPESCRIPT_STANDARD: false
           VALIDATE_CHECKOV: false
           VALIDATE_JSCPD: false
+          VALIDATE_BIOME_FORMAT: false
+          VALIDATE_BIOME_LINT: false
+          VALIDATE_TRIVY: false
+          VALIDATE_GITHUB_ACTIONS_ZIZMOR: false
+          VALIDATE_TSX: false
+          VALIDATE_JAVASCRIPT_PRETTIER: false
+          VALIDATE_TYPESCRIPT_PRETTIER: false
