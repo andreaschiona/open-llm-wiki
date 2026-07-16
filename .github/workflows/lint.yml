@@ -39,3 +39,5 @@ jobs:
           VALIDATE_TRIVY: false
           VALIDATE_GITHUB_ACTIONS: false
           VALIDATE_TSX: false
+          VALIDATE_JAVASCRIPT_PRETTIER: false
+          VALIDATE_TYPESCRIPT_PRETTIER: false
