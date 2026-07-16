@@ -89,3 +89,58 @@
   background: var(--error);
   box-shadow: 0 0 4px var(--error);
 }
+
+/* === Mobile Bottom Navigation (max-width: 767px) === */
+@media (max-width: 767px) {
+  .sidebar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 60px;
+    flex-direction: row;
+    border-right: none;
+    border-top: 1px solid var(--border);
+    z-index: 1000;
+  }
+
+  .sidebar-header {
+    display: none;
+  }
+
+  .sidebar-nav {
+    flex-direction: row;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    gap: 0;
+  }
+
+  .sidebar-item {
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 4px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 0;
+    font-size: 10px;
+    min-height: 44px;
+  }
+
+  .sidebar-icon {
+    font-size: 22px;
+    width: auto;
+  }
+
+  .sidebar-label {
+    display: none;
+  }
+
+  .update-badge {
+    top: 8px;
+    right: 50%;
+    transform: translateX(16px);
+  }
+}

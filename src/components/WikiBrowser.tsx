@@ -19,6 +19,7 @@ export function WikiBrowser() {
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(
     new Set(['wiki']),
   )
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false)
 
   useEffect(() => {
     if (initialized) {
@@ -38,7 +39,13 @@ export function WikiBrowser() {
 
   return (
     <div className="wiki-browser">
-      <div className="wiki-sidebar">
+      {showMobileSidebar && (
+        <div
+          className="wiki-sidebar-backdrop"
+          onClick={() => setShowMobileSidebar(false)}
+        />
+      )}
+      <div className={`wiki-sidebar${showMobileSidebar ? ' wiki-sidebar-mobile-visible' : ''}`}>
         <div className="wiki-sidebar-tabs">
           <button
             className={`tab ${view === 'index' ? 'active' : ''}`}
@@ -135,6 +142,13 @@ export function WikiBrowser() {
         </div>
       </div>
       <div className="wiki-content">
+        <button
+          className="wiki-mobile-toggle"
+          onClick={() => setShowMobileSidebar((prev) => !prev)}
+          aria-label="Toggle sidebar"
+        >
+          ☰
+        </button>
         {currentPage ? (
           <MarkdownRenderer content={currentPage.content} />
         ) : (
