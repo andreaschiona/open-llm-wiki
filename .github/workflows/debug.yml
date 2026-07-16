@@ -1,9 +1,0 @@
-name: Debug
-on:
-  push:
-    branches: [set-secrets-gha]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "Hello from workflow"
