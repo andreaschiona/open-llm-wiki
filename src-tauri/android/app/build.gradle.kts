@@ -49,6 +49,27 @@ android {
                     .plus(getDefaultProguardFile("proguard-android-optimize.txt"))
                     .toList().toTypedArray()
             )
+            signingConfig = signingConfigs.findByName("release")
+        }
+    }
+    signingConfigs {
+        create("release") {
+            val keystoreProps = file("../keystore.properties")
+            if (keystoreProps.exists()) {
+                val props = Properties().apply {
+                    keystoreProps.inputStream().use { load(it) }
+                }
+                storeFile = file(props.getProperty("storeFile"))
+                storePassword = props.getProperty("storePassword")
+                keyAlias = props.getProperty("keyAlias")
+                keyPassword = props.getProperty("keyPassword")
+            } else {
+                // Fallback: try environment variables (CI)
+                storeFile = System.getenv("ANDROID_KEYSTORE_PATH")?.let { file(it) }
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD") ?: "android"
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS") ?: "androiddebugkey"
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD") ?: "android"
+            }
         }
     }
     kotlinOptions {
