@@ -1,4 +1,4 @@
-import js from '@eslint/js';
+import js from '@eslint/js'
 
 export default [
   js.configs.recommended,
@@ -27,4 +27,4 @@ export default [
       '**/.tauri/**',
     ],
   },
-];
+]
