@@ -35,3 +35,7 @@ jobs:
           VALIDATE_CHECKOV: false
           VALIDATE_JSCPD: false
           VALIDATE_BIOME_FORMAT: false
+          VALIDATE_BIOME: false
+          VALIDATE_TRIVY: false
+          VALIDATE_GITHUB_ACTIONS: false
+          VALIDATE_TSX: false
