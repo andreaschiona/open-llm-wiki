@@ -207,11 +207,19 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
+          BUILD_OK=false
           for i in {1..3}; do
-            npx tauri android build && break
+            if npx tauri android build; then
+              BUILD_OK=true
+              break
+            fi
             echo "Android build attempt $i failed, retrying in 30s..."
             sleep 30
           done
+          if [ "$BUILD_OK" != "true" ]; then
+            echo "::error::All 3 Android build attempts failed!"
+            exit 1
+          fi
 
       - name: Upload Android APK (artifact)
         uses: actions/upload-artifact@v4
