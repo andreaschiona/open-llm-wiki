@@ -195,6 +195,12 @@ jobs:
         run: |
           npx tauri icon src-tauri/icons/icon.png
 
+      - name: Initialize Android project
+        shell: bash
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          npx tauri android init
+
       - name: Build Android APK/AAB
         shell: bash
         env:
