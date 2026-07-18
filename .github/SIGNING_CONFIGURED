@@ -1,0 +1,2 @@
+# Tauri signing keys configured on 2026-07-18
+TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD set as repo secrets.
