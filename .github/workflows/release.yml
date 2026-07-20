@@ -207,12 +207,12 @@ jobs:
           ANDROID_DIR="src-tauri/gen/android"
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$ANDROID_DIR/open-llm-wiki.keystore"
           echo "Keystore decoded: $(wc -c < "$ANDROID_DIR/open-llm-wiki.keystore") bytes"
-          cat > "$ANDROID_DIR/keystore.properties" << EOF
-          storeFile=../open-llm-wiki.keystore
-          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
-          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
-          EOF
+          printf '%s\n' \
+            "storeFile=../open-llm-wiki.keystore" \
+            "storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+            "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" \
+            "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" \
+            > "$ANDROID_DIR/keystore.properties"
           echo "keystore.properties created"
 
       - name: Build Android APK/AAB
