@@ -204,9 +204,9 @@ jobs:
       - name: Decode Android keystore & configure signing
         shell: bash
         run: |
-          # Write to gen/android/ (build directory, created by tauri android init)
-          # and android/ (source template)
-          for ANDROID_DIR in "src-tauri/gen/android" "src-tauri/android"; do
+          # Write to gen/android/open_llm_wiki/ (the actual Gradle project root)
+          # and android/ (source template, which gets copied to gen during init)
+          for ANDROID_DIR in "src-tauri/gen/android/open_llm_wiki" "src-tauri/android"; do
             if [ -d "$ANDROID_DIR" ]; then
               echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$ANDROID_DIR/open-llm-wiki.keystore"
               echo "Keystore decoded to $ANDROID_DIR: $(wc -c < "$ANDROID_DIR/open-llm-wiki.keystore") bytes"
@@ -224,7 +224,7 @@ jobs:
       - name: Build Android APK/AAB
         shell: bash
         env:
-          ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/src-tauri/gen/android/open-llm-wiki.keystore
+          ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/src-tauri/gen/android/open_llm_wiki/open-llm-wiki.keystore
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
