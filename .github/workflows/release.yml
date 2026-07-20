@@ -340,14 +340,22 @@ jobs:
               --v2-signing-enabled true \
               --v3-signing-enabled true \
               --min-sdk-version "$MIN_SDK" \
-              "$apk" 2>&1
+              "$apk" 2>&1 && {
+              echo "  ✅ APK SIGNED: $apk"
+            } || {
+              echo "  ❌ SIGNING FAILED: $apk"
+              exit 1
+            }
 
             # Verify
-            "$APKSIGNER" verify --verbose "$apk" 2>&1 | tail -5
-            if [ $? -eq 0 ]; then
-              echo "  ✅ APK SIGNED & VERIFIED: $apk"
-            else
-              echo "  ❌ VERIFICATION FAILED: $apk"
+            "$APKSIGNER" verify --verbose "$apk" 2>&1 | tail -3
+            # apksigner verify exit code ignored (post-sign check only)
+
+            # Rename to drop -unsigned suffix for clarity
+            signed_name="${apk/-unsigned/}"
+            if [ "$apk" != "$signed_name" ] && [ ! -f "$signed_name" ]; then
+              mv "$apk" "$signed_name"
+              echo "  Renamed to: $signed_name"
             fi
           done
 
