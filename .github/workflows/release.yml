@@ -204,22 +204,27 @@ jobs:
       - name: Decode Android keystore & configure signing
         shell: bash
         run: |
-          ANDROID_DIR="src-tauri/android"
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$ANDROID_DIR/open-llm-wiki.keystore"
-          echo "Keystore decoded: $(wc -c < "$ANDROID_DIR/open-llm-wiki.keystore") bytes"
-          printf '%s\n' \
-            "storeFile=../open-llm-wiki.keystore" \
-            "storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
-            "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" \
-            "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" \
-            > "$ANDROID_DIR/keystore.properties"
-          echo "keystore.properties created"
-          cat "$ANDROID_DIR/keystore.properties"
+          # Write to gen/android/ (build directory, created by tauri android init)
+          # and android/ (source template)
+          for ANDROID_DIR in "src-tauri/gen/android" "src-tauri/android"; do
+            if [ -d "$ANDROID_DIR" ]; then
+              echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$ANDROID_DIR/open-llm-wiki.keystore"
+              echo "Keystore decoded to $ANDROID_DIR: $(wc -c < "$ANDROID_DIR/open-llm-wiki.keystore") bytes"
+              printf '%s\n' \
+                "storeFile=../open-llm-wiki.keystore" \
+                "storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+                "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" \
+                "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" \
+                > "$ANDROID_DIR/keystore.properties"
+              echo "keystore.properties created in $ANDROID_DIR"
+              cat "$ANDROID_DIR/keystore.properties"
+            fi
+          done
 
       - name: Build Android APK/AAB
         shell: bash
         env:
-          ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/src-tauri/android/open-llm-wiki.keystore
+          ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/src-tauri/gen/android/open-llm-wiki.keystore
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
