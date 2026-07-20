@@ -246,6 +246,14 @@ jobs:
       - name: Sign Android APK & AAB with apksigner (V1+V2+V3)
         shell: bash
         run: |
+          # Install Android build-tools if not present (contains apksigner)
+          echo "=== Ensuring Android build-tools are installed ==="
+          SDKMANAGER=$(find /usr/local/lib/android/sdk -name 'sdkmanager' -type f 2>/dev/null | head -1)
+          if [ -n "$SDKMANAGER" ]; then
+            yes | "$SDKMANAGER" "build-tools;35.0.0" 2>&1 | tail -3
+          fi
+          echo "Android SDK root: ${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}"
+
           # Find or create the keystore file
           KEYSTORE=""
           for try in "src-tauri/gen/android" "src-tauri/android"; do
