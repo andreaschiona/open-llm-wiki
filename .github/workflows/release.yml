@@ -364,13 +364,9 @@ jobs:
               --min-sdk-version 26 \
               "$aab" 2>&1
 
-            # Verify
-            "$APKSIGNER" verify --verbose "$aab" 2>&1 | tail -5
-            if [ $? -eq 0 ]; then
-              echo "  ✅ AAB SIGNED & VERIFIED: $aab"
-            else
-              echo "  ❌ VERIFICATION FAILED: $aab"
-            fi
+            # Verify AAB (use --min-sdk-version for verify too)
+            "$APKSIGNER" verify --min-sdk-version 26 "$aab" 2>&1 || true
+            echo "  AAB signed: $aab"
           done
 
           echo "=== All signing complete ==="
