@@ -361,6 +361,7 @@ jobs:
               --key-pass "pass:${{ secrets.ANDROID_KEY_PASSWORD }}" \
               --v1-signing-enabled false \
               --v2-signing-enabled true \
+              --min-sdk-version 26 \
               "$aab" 2>&1
 
             # Verify
