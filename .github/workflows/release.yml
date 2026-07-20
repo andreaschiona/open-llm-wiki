@@ -243,15 +243,10 @@ jobs:
             exit 1
           fi
 
-      - name: Sign Android APK & AAB with jarsigner
+      - name: Sign Android APK & AAB with apksigner (V1+V2+V3)
         shell: bash
-        env:
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          # Find or create the keystore file - it should be in src-tauri/android/
-          # after the Decode step, but might not be in gen/android/ yet.
+          # Find or create the keystore file
           KEYSTORE=""
           for try in "src-tauri/gen/android" "src-tauri/android"; do
             found=$(find "$try" -name 'open-llm-wiki.keystore' -type f 2>/dev/null | head -1)
@@ -262,53 +257,75 @@ jobs:
             fi
           done
 
-          # If still not found, decode it directly here
           if [ -z "$KEYSTORE" ]; then
-            # Find the gen/android project dir
-            GEN_DIR=$(find "src-tauri/gen/android" -name 'build.gradle.kts' -path '*/app/build.gradle.kts' 2>/dev/null | head -1 | xargs dirname 2>/dev/null | xargs dirname 2>/dev/null || echo "")
-            if [ -z "$GEN_DIR" ]; then
-              GEN_DIR="src-tauri/android"
-            fi
+            GEN_DIR="src-tauri/android"
             echo "Decoding keystore directly to $GEN_DIR"
             echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$GEN_DIR/open-llm-wiki.keystore"
             KEYSTORE="$GEN_DIR/open-llm-wiki.keystore"
           fi
 
-          echo "Using keystore: $KEYSTORE"
+          # Find apksigner in Android SDK
+          APKSIGNER=$(find "$ANDROID_SDK_ROOT" -name 'apksigner' -type f 2>/dev/null | head -1)
+          if [ -z "$APKSIGNER" ]; then
+            echo "::error::apksigner not found in Android SDK"
+            exit 1
+          fi
+          echo "Using apksigner: $APKSIGNER"
 
-          # Sign all APKs found under gen/android/
+          # Find zipalign
+          ZIPALIGN=$(find "$ANDROID_SDK_ROOT" -name 'zipalign' -type f 2>/dev/null | head -1)
+          echo "Using zipalign: ${ZIPALIGN:-not found}"
+
+          # Sign all APKs
+          echo "=== Signing APKs ==="
           find "src-tauri/gen/android" -name '*.apk' -type f | while read apk; do
-            dir=$(dirname "$apk")
-            base=$(basename "$apk" .apk)
-            signed_name="${base/-unsigned/}-signed.apk"
-            echo "Signing: $apk -> $dir/$signed_name"
-            jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-              -keystore "$KEYSTORE" \
-              -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
-              -keypass "${{ secrets.ANDROID_KEY_PASSWORD }}" \
-              -signedjar "$dir/$signed_name" \
-              "$apk" \
-              "${{ secrets.ANDROID_KEY_ALIAS }}" 2>&1 | tail -5
-            jarsigner -verify "$dir/$signed_name" 2>&1 && echo "  ✅ VERIFIED" || echo "  ❌ VERIFICATION FAILED"
-            cp "$dir/$signed_name" "$apk"
+            echo "--- Signing: $apk ---"
+
+            # Zipalign first (4-byte alignment for V2/V3)
+            if [ -n "$ZIPALIGN" ]; then
+              aligned="${apk}.aligned"
+              "$ZIPALIGN" -p -f 4 "$apk" "$aligned" 2>&1
+              mv "$aligned" "$apk"
+              echo "  Zipaligned: $apk"
+            fi
+
+            # Sign with apksigner (creates V1+V2+V3 automatically)
+            "$APKSIGNER" sign \
+              --ks "$KEYSTORE" \
+              --ks-key-alias "${{ secrets.ANDROID_KEY_ALIAS }}" \
+              --ks-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+              --key-pass "pass:${{ secrets.ANDROID_KEY_PASSWORD }}" \
+              --v1-signing-enabled true \
+              --v2-signing-enabled true \
+              --v3-signing-enabled true \
+              "$apk" 2>&1
+
+            # Verify
+            "$APKSIGNER" verify --verbose "$apk" 2>&1 | tail -5
+            if [ $? -eq 0 ]; then
+              echo "  ✅ APK SIGNED & VERIFIED: $apk"
+            else
+              echo "  ❌ VERIFICATION FAILED: $apk"
+            fi
           done
 
-          # Sign all AABs found
+          # Sign all AABs
           echo "=== Signing AABs ==="
           find "src-tauri/gen/android" -name '*.aab' -type f | while read aab; do
-            dir=$(dirname "$aab")
-            base=$(basename "$aab" .aab)
-            signed_name="${base}-signed.aab"
-            echo "Signing: $aab -> $dir/$signed_name"
-            jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-              -keystore "$KEYSTORE" \
-              -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
-              -keypass "${{ secrets.ANDROID_KEY_PASSWORD }}" \
-              -signedjar "$dir/$signed_name" \
-              "$aab" \
-              "${{ secrets.ANDROID_KEY_ALIAS }}" 2>&1 | tail -5
-            jarsigner -verify "$dir/$signed_name" 2>&1 && echo "  ✅ VERIFIED" || echo "  ❌ VERIFICATION FAILED"
-            cp "$dir/$signed_name" "$aab"
+            echo "--- Signing: $aab ---"
+            "$APKSIGNER" sign \
+              --ks "$KEYSTORE" \
+              --ks-key-alias "${{ secrets.ANDROID_KEY_ALIAS }}" \
+              --ks-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+              --key-pass "pass:${{ secrets.ANDROID_KEY_PASSWORD }}" \
+              "$aab" 2>&1
+
+            "$APKSIGNER" verify --verbose "$aab" 2>&1 | tail -5
+            if [ $? -eq 0 ]; then
+              echo "  ✅ AAB SIGNED & VERIFIED: $aab"
+            else
+              echo "  ❌ VERIFICATION FAILED: $aab"
+            fi
           done
 
           echo "=== All signing complete ==="
