@@ -314,7 +314,8 @@ jobs:
 
           # Sign all APKs
           echo "=== Signing APKs ==="
-          find "src-tauri/gen/android" -name '*.apk' -type f | while read apk; do
+          # Only sign real APK outputs, not intermediates
+          find "src-tauri/gen/android" -path '*/outputs/*' -name '*.apk' -type f | while read apk; do
             echo "--- Signing: $apk ---"
 
             # Zipalign first (4-byte alignment for V2/V3)
@@ -325,6 +326,10 @@ jobs:
               echo "  Zipaligned: $apk"
             fi
 
+            # Determine minSdkVersion from the APK contents
+            # Default to 26 (Android 8.0) for broad compatibility
+            MIN_SDK=26
+
             # Sign with apksigner (creates V1+V2+V3 automatically)
             "$APKSIGNER" sign \
               --ks "$KEYSTORE" \
@@ -334,6 +339,7 @@ jobs:
               --v1-signing-enabled true \
               --v2-signing-enabled true \
               --v3-signing-enabled true \
+              --min-sdk-version "$MIN_SDK" \
               "$apk" 2>&1
 
             # Verify
@@ -345,17 +351,19 @@ jobs:
             fi
           done
 
-          # Sign all AABs
           echo "=== Signing AABs ==="
-          find "src-tauri/gen/android" -name '*.aab' -type f | while read aab; do
+          find "src-tauri/gen/android" -path '*/outputs/*' -name '*.aab' -type f | while read aab; do
             echo "--- Signing: $aab ---"
             "$APKSIGNER" sign \
               --ks "$KEYSTORE" \
               --ks-key-alias "${{ secrets.ANDROID_KEY_ALIAS }}" \
               --ks-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
               --key-pass "pass:${{ secrets.ANDROID_KEY_PASSWORD }}" \
+              --v1-signing-enabled false \
+              --v2-signing-enabled true \
               "$aab" 2>&1
 
+            # Verify
             "$APKSIGNER" verify --verbose "$aab" 2>&1 | tail -5
             if [ $? -eq 0 ]; then
               echo "  ✅ AAB SIGNED & VERIFIED: $aab"
