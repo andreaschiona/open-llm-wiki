@@ -136,7 +136,7 @@ jobs:
           cp update.json "update_${{ matrix.os }}.json"
 
       - name: Upload update fragment
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: update_${{ matrix.os }}
           path: update_${{ matrix.os }}.json
@@ -380,14 +380,14 @@ jobs:
           echo "=== All signing complete ==="
 
       - name: Upload Android APK (artifact)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-apk
           path: |
             src-tauri/gen/android/app/build/outputs/apk/**/*.apk
 
       - name: Upload Android AAB (artifact)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-aab
           path: |
