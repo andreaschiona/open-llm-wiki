@@ -204,7 +204,7 @@ jobs:
       - name: Decode Android keystore & configure signing
         shell: bash
         run: |
-          ANDROID_DIR="src-tauri/gen/android"
+          ANDROID_DIR="src-tauri/android"
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$ANDROID_DIR/open-llm-wiki.keystore"
           echo "Keystore decoded: $(wc -c < "$ANDROID_DIR/open-llm-wiki.keystore") bytes"
           printf '%s\n' \
@@ -214,9 +214,15 @@ jobs:
             "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" \
             > "$ANDROID_DIR/keystore.properties"
           echo "keystore.properties created"
+          cat "$ANDROID_DIR/keystore.properties"
 
       - name: Build Android APK/AAB
         shell: bash
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/src-tauri/android/open-llm-wiki.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           BUILD_OK=false
           for i in {1..3}; do
