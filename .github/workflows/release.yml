@@ -243,12 +243,65 @@ jobs:
             exit 1
           fi
 
+      - name: Sign Android APK & AAB with jarsigner
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/src-tauri/gen/android/open_llm_wiki/open-llm-wiki.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          # Sign the APK with jarsigner (included in JDK)
+          APK_DIR="src-tauri/gen/android/open_llm_wiki/app/build/outputs/apk"
+          AAB_DIR="src-tauri/gen/android/open_llm_wiki/app/build/outputs/bundle"
+          KEYSTORE="${{ github.workspace }}/src-tauri/gen/android/open_llm_wiki/open-llm-wiki.keystore"
+
+          # Sign all APKs found under gen/android/
+          find "src-tauri/gen/android" -name '*.apk' -type f | while read apk; do
+            dir=$(dirname "$apk")
+            base=$(basename "$apk" .apk)
+            # Remove "-unsigned" suffix if present
+            signed_name="${base/-unsigned/}-signed.apk"
+            echo "Signing: $apk -> $dir/$signed_name"
+            jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+              -keystore "$KEYSTORE" \
+              -storepass "$ANDROID_KEYSTORE_PASSWORD" \
+              -keypass "$ANDROID_KEY_PASSWORD" \
+              -signedjar "$dir/$signed_name" \
+              "$apk" \
+              "$ANDROID_KEY_ALIAS" 2>&1 | tail -5
+            # Verify
+            jarsigner -verify "$dir/$signed_name" 2>&1 && echo "  ✅ VERIFIED" || echo "  ❌ VERIFICATION FAILED"
+            # Replace unsigned with signed for upload
+            cp "$dir/$signed_name" "$apk"
+          done
+
+          # Sign all AABs found
+          echo "=== Signing AABs ==="
+          find "$AAB_DIR" -name '*.aab' -type f | while read aab; do
+            dir=$(dirname "$aab")
+            base=$(basename "$aab" .aab)
+            signed_name="${base}-signed.aab"
+            echo "Signing: $aab -> $dir/$signed_name"
+            jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+              -keystore "$KEYSTORE" \
+              -storepass "$ANDROID_KEYSTORE_PASSWORD" \
+              -keypass "$ANDROID_KEY_PASSWORD" \
+              -signedjar "$dir/$signed_name" \
+              "$aab" \
+              "$ANDROID_KEY_ALIAS" 2>&1 | tail -5
+            jarsigner -verify "$dir/$signed_name" 2>&1 && echo "  ✅ VERIFIED" || echo "  ❌ VERIFICATION FAILED"
+            cp "$dir/$signed_name" "$aab"
+          done
+
+          echo "=== All signing complete ==="
+
       - name: Upload Android APK (artifact)
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
           path: |
-            src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+            src-tauri/gen/android/open_llm_wiki/app/build/outputs/apk/**/*.apk
 
       - name: Upload Android AAB (artifact)
         uses: actions/upload-artifact@v4
