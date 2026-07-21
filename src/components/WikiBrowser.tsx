@@ -39,12 +39,10 @@ export function WikiBrowser() {
 
   return (
     <div className="wiki-browser">
-      {showMobileSidebar && (
-        <div
-          className="wiki-sidebar-backdrop"
-          onClick={() => setShowMobileSidebar(false)}
-        />
-      )}
+      <div
+        className={`wiki-sidebar-backdrop${showMobileSidebar ? ' visible' : ''}`}
+        onClick={() => setShowMobileSidebar(false)}
+      />
       <div className={`wiki-sidebar${showMobileSidebar ? ' wiki-sidebar-mobile-visible' : ''}`}>
         <div className="wiki-sidebar-tabs">
           <button
