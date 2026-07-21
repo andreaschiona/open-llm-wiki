@@ -138,3 +138,8 @@ export interface QueryRecord {
   createdAt: string
   pagesReferenced: string[]
 }
+
+export interface RoutingRule {
+  pattern: string
+  target: string
+}

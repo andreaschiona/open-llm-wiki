@@ -5,6 +5,8 @@
  * isolated testing and reuse.
  */
 
+import type { RoutingRule } from '../../types'
+
 /**
  * Sanitise a string for use as a filename: lowercase, replace non-alphanumeric
  * sequences with hyphens, strip leading/trailing hyphens.
@@ -64,8 +66,17 @@ export function detectRawCategory(source: string): string {
 
 /**
  * Detect the target thematic wiki from source URL and LLM-derived tags.
+ *
+ * Accepts an optional `rules` array of RoutingRule for configurable routing.
+ * If rules are provided, the first matching rule determines the target.
+ * If no rule matches (or no rules are provided), falls back to the built-in
+ * heuristic for backward compatibility.
  */
-export function detectTargetWiki(source: string, tags: string[]): string {
+export function detectTargetWiki(
+  source: string,
+  tags: string[],
+  rules?: RoutingRule[],
+): string {
   const sourceLower = source.toLowerCase()
   let hostname = ''
   try {
@@ -74,6 +85,21 @@ export function detectTargetWiki(source: string, tags: string[]): string {
     hostname = ''
   }
   const allTags = tags.map((t) => t.toLowerCase())
+
+  if (rules && rules.length > 0) {
+    for (const rule of rules) {
+      const pattern = rule.pattern.toLowerCase()
+      if (
+        allTags.some((t) => t.includes(pattern)) ||
+        sourceLower.includes(pattern) ||
+        hostname.includes(pattern)
+      ) {
+        return rule.target
+      }
+    }
+  }
+
+  // Built-in heuristic (backward compatibility)
   if (
     allTags.some((t) =>
       [

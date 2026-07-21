@@ -1,4 +1,4 @@
-import type { LLMProviderConfig } from '../../types'
+import type { LLMProviderConfig, RoutingRule } from '../../types'
 import { logger } from '../utils/logger'
 import { FREE_MODELS } from '../llm/openRouter'
 
@@ -16,6 +16,8 @@ export class ConfigManager {
   private activeProviderId: string | null = null
   private workDir: string = ''
   private githubToken: string = ''
+  private thematicCategories: string[] = ['ai-news', 'strumenti-ai', 'concetti']
+  private routingRules: RoutingRule[] = []
   private fileOps: FileOps
 
   constructor(fileOps: FileOps) {
@@ -36,6 +38,8 @@ export class ConfigManager {
         this.activeProviderId = parsed.activeProviderId || null
         this.workDir = parsed.workDir || ''
         this.githubToken = parsed.githubToken || ''
+        this.thematicCategories = parsed.thematicCategories || ['ai-news', 'strumenti-ai', 'concetti']
+        this.routingRules = parsed.routingRules || []
       } catch (err) {
         logger.error('ConfigManager', 'Failed to load config', err)
         await this.createDefault()
@@ -73,6 +77,8 @@ export class ConfigManager {
         activeProviderId: this.activeProviderId,
         workDir: this.workDir,
         githubToken: this.githubToken,
+        thematicCategories: this.thematicCategories,
+        routingRules: this.routingRules,
       },
       null,
       2,
@@ -146,5 +152,23 @@ export class ConfigManager {
 
   async updateApiKey(providerId: string, apiKey: string): Promise<void> {
     await this.updateProvider(providerId, { apiKey })
+  }
+
+  getThematicCategories(): string[] {
+    return [...this.thematicCategories]
+  }
+
+  async setThematicCategories(categories: string[]): Promise<void> {
+    this.thematicCategories = [...categories]
+    await this.save()
+  }
+
+  getRoutingRules(): RoutingRule[] {
+    return this.routingRules.map(r => ({ ...r }))
+  }
+
+  async setRoutingRules(rules: RoutingRule[]): Promise<void> {
+    this.routingRules = rules.map(r => ({ ...r }))
+    await this.save()
   }
 }

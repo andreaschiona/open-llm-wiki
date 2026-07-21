@@ -44,26 +44,28 @@ export class WikiManager {
     return `${QUERY_BASE}/${subpath}`
   }
 
-  private readonly thematicWikis = ['ai-news', 'strumenti-ai', 'concetti']
-
   async init(): Promise<void> {
-    for (const dir of this.thematicWikis) {
-      const fullPath = this.resolvePath(dir)
-      if (!(await this.fileOps.fileExists(fullPath))) {
+    if (!(await this.fileOps.fileExists(this.basePath))) {
+      await this.fileOps.createDir(this.basePath)
+    }
+    if (!(await this.fileOps.fileExists(RAW_BASE))) {
+      await this.fileOps.createDir(RAW_BASE)
+    }
+    if (!(await this.fileOps.fileExists(QUERY_BASE))) {
+      await this.fileOps.createDir(QUERY_BASE)
+    }
+
+    const existing = await this.scanWikiCategories()
+    if (existing.length === 0) {
+      const defaults = ['ai-news', 'strumenti-ai', 'concetti']
+      for (const dir of defaults) {
+        const fullPath = this.resolvePath(dir)
         await this.fileOps.createDir(fullPath)
         logger.info('WikiManager', `Created thematic wiki: ${fullPath}`)
       }
     }
 
-    const rawDirs = [
-      'pdfs',
-      'meetings',
-      'audio',
-      'chat',
-      'code',
-      'data',
-      'other',
-    ]
+    const rawDirs = ['pdfs', 'meetings', 'audio', 'chat', 'code', 'data', 'other']
     for (const dir of rawDirs) {
       const fullPath = this.resolveRaw(dir)
       if (!(await this.fileOps.fileExists(fullPath))) {
@@ -83,7 +85,7 @@ export class WikiManager {
 
     const indiceMd = this.resolvePath('indice.md')
     if (!(await this.fileOps.fileExists(indiceMd))) {
-      await this.fileOps.writeFile(indiceMd, this.generateInitialIndex())
+      await this.fileOps.writeFile(indiceMd, await this.generateInitialIndex())
     }
     const logMd = this.resolvePath('log.md')
     if (!(await this.fileOps.fileExists(logMd))) {
@@ -93,22 +95,23 @@ export class WikiManager {
     logger.info('WikiManager', 'Wiki initialized with thematic wiki structure')
   }
 
-  private generateInitialIndex(): string {
-    const wikis = this.thematicWikis
-      .map((w) => {
-        const label = w
-          .replace(/-/g, ' ')
-          .replace(/\b\w/g, (c) => c.toUpperCase())
-        return `### [${label}](${w}/indice_wiki.md)\n_Ancora nessun articolo. Usa \`ingest\` per aggiungere contenuti._`
-      })
-      .join('\n\n')
+  private async generateInitialIndex(): Promise<string> {
+    const wikis = await this.scanWikiCategories()
+    const sections = wikis.length > 0
+      ? wikis.map((w) => {
+          const label = w
+            .replace(/-/g, ' ')
+            .replace(/\b\w/g, (c) => c.toUpperCase())
+          return `### [${label}](${w}/indice_wiki.md)\n_Ancora nessun articolo. Usa \`ingest\` per aggiungere contenuti._`
+        }).join('\n\n')
+      : '_Nessuna wiki tematica. Crea una categoria dalle impostazioni._'
     return `# Wiki Index
 
 Ultimo aggiornamento: ${new Date().toISOString().split('T')[0]} — **0 articoli**
 
 ## Wiki tematiche
 
-${wikis}
+${sections}
 
 ---
 
@@ -147,17 +150,13 @@ ${wikis}
 
   async listPages(): Promise<string[]> {
     const all: string[] = []
-    for (const wiki of this.thematicWikis) {
-      const path = this.resolvePath(wiki)
-      try {
-        const entries = await this.fileOps.listDir(path)
-        for (const e of entries) {
-          if (e.endsWith('.md') && e !== 'indice_wiki.md') {
-            all.push(`${wiki}/${e}`)
-          }
+    const wikis = await this.scanWikiCategories()
+    for (const wiki of wikis) {
+      const files = await this.listWikiFiles(wiki)
+      for (const f of files) {
+        if (f !== 'indice_wiki.md') {
+          all.push(`${wiki}/${f}`)
         }
-      } catch {
-        /* skip */
       }
     }
     return all
@@ -165,17 +164,11 @@ ${wikis}
 
   async listAllWikiFiles(): Promise<string[]> {
     const all: string[] = []
-    for (const wiki of this.thematicWikis) {
-      try {
-        const path = this.resolvePath(wiki)
-        const entries = await this.fileOps.listDir(path)
-        for (const e of entries) {
-          if (e.endsWith('.md')) {
-            all.push(`${wiki}/${e}`)
-          }
-        }
-      } catch {
-        /* skip */
+    const wikis = await this.scanWikiCategories()
+    for (const wiki of wikis) {
+      const files = await this.listWikiFiles(wiki)
+      for (const f of files) {
+        all.push(`${wiki}/${f}`)
       }
     }
     const indexMd = this.resolvePath('indice.md')
@@ -189,114 +182,53 @@ ${wikis}
   }
 
   async listThematicWikis(): Promise<string[]> {
-    const result: string[] = []
-    for (const wiki of this.thematicWikis) {
-      const path = this.resolvePath(wiki)
-      try {
-        await this.fileOps.listDir(path)
-        result.push(wiki)
-      } catch {
-        /* skip */
-      }
-    }
-    return result
+    return this.scanWikiCategories()
   }
 
   async getTree(): Promise<WikiTreeNode[]> {
     const root: WikiTreeNode[] = []
 
-    const wikiNode: WikiTreeNode = {
-      name: 'wiki',
-      path: 'wiki',
-      type: 'directory',
-      children: [],
-    }
-    const wikis = await this.listThematicWikis()
-    wikiNode.children = await Promise.all(
-      wikis.map(async (w) => {
-        const files = await this.listWikiFiles(w)
-        return {
-          name: w,
-          path: `wiki/${w}`,
-          type: 'directory' as const,
-          children: files.map((f) => ({
-            name: f,
-            path: `wiki/${w}/${f}`,
-            type: 'file' as const,
-          })),
-        }
-      }),
-    )
-    // Add indice.md and log.md at wiki root
-    wikiNode.children.push({
-      name: 'indice.md',
-      path: 'wiki/indice.md',
-      type: 'file' as const,
-    })
-    wikiNode.children.push({
-      name: 'log.md',
-      path: 'wiki/log.md',
-      type: 'file' as const,
-    })
+    const wikiNode = await this.buildDirTree(this.basePath, 'wiki')
     root.push(wikiNode)
 
-    const rawNode: WikiTreeNode = {
-      name: 'raw',
-      path: 'raw',
-      type: 'directory',
-      children: [],
-    }
-    const rawDirs = [
-      'pdfs',
-      'meetings',
-      'audio',
-      'chat',
-      'code',
-      'data',
-      'other',
-    ]
-    for (const cat of rawDirs) {
-      const catNode: WikiTreeNode = {
-        name: cat,
-        path: `raw/${cat}`,
-        type: 'directory',
-        children: [],
-      }
-      const files = await this.listRawFiles(cat)
-      catNode.children = files.map((f) => ({
-        name: f,
-        path: `raw/${cat}/${f}`,
-        type: 'file' as const,
-      }))
-      if (rawNode.children) rawNode.children.push(catNode)
-    }
+    const rawNode = await this.buildDirTree(RAW_BASE, 'raw')
     root.push(rawNode)
 
-    const queryNode: WikiTreeNode = {
-      name: 'query',
-      path: 'query',
-      type: 'directory',
-      children: [],
-    }
-    const queryDirs = ['plans', 'outputs']
-    for (const cat of queryDirs) {
-      const catNode: WikiTreeNode = {
-        name: cat,
-        path: `query/${cat}`,
-        type: 'directory',
-        children: [],
-      }
-      const files = await this.listQueryFiles(cat)
-      catNode.children = files.map((f) => ({
-        name: f,
-        path: `query/${cat}/${f}`,
-        type: 'file' as const,
-      }))
-      if (queryNode.children) queryNode.children.push(catNode)
-    }
+    const queryNode = await this.buildDirTree(QUERY_BASE, 'query')
     root.push(queryNode)
 
     return root
+  }
+
+  private async buildDirTree(dirPath: string, displayPath: string): Promise<WikiTreeNode> {
+    const name = dirPath.split('/').pop() || dirPath
+    const node: WikiTreeNode = {
+      name,
+      path: displayPath,
+      type: 'directory',
+      children: [],
+    }
+    try {
+      const entries = await this.fileOps.listDir(dirPath)
+      for (const entry of entries.sort()) {
+        const fullPath = `${dirPath}/${entry}`
+        const childDisplayPath = `${displayPath}/${entry}`
+        try {
+          await this.fileOps.listDir(fullPath)
+          const childNode = await this.buildDirTree(fullPath, childDisplayPath)
+          node.children!.push(childNode)
+        } catch {
+          node.children!.push({
+            name: entry,
+            path: childDisplayPath,
+            type: 'file',
+          })
+        }
+      }
+    } catch {
+      /* directory doesn't exist */
+    }
+    return node
   }
 
   async appendLog(entry: LogEntry): Promise<void> {
@@ -333,8 +265,9 @@ ${wikis}
     try {
       const sections: string[] = []
       let totalArticles = 0
+      const wikis = await this.scanWikiCategories()
 
-      for (const wiki of this.thematicWikis) {
+      for (const wiki of wikis) {
         const files = await this.listWikiFiles(wiki)
         const articles = files.filter((f) => f !== 'indice_wiki.md')
         if (articles.length === 0) {
@@ -391,7 +324,7 @@ ${sections.join('\n\n')}
       await this.fileOps.writeFile(indexPath, content)
     } catch (err) {
       logger.warn('WikiManager', 'updateMainIndex fallback to initial', err)
-      await this.fileOps.writeFile(indexPath, this.generateInitialIndex())
+      await this.fileOps.writeFile(indexPath, await this.generateInitialIndex())
     }
   }
 
@@ -477,27 +410,14 @@ ${sections.join('\n\n')}
 
   async getAllRawFiles(): Promise<RawFileInfo[]> {
     const result: RawFileInfo[] = []
-    const categories = [
-      'pdfs',
-      'meetings',
-      'audio',
-      'chat',
-      'code',
-      'data',
-      'other',
-    ]
+    const categories = await this.scanRawCategories()
     for (const cat of categories) {
       const files = await this.listRawFiles(cat)
       for (const f of files) {
         result.push({
           name: f,
           path: `raw/${cat}/${f}`,
-          type:
-            cat === 'pdfs'
-              ? 'pdf'
-              : cat === 'meetings'
-                ? 'meeting'
-                : (cat as RawFileInfo['type']),
+          type: this.inferRawType(cat),
           size: 0,
           importedAt: new Date().toISOString(),
           ingested: false,
@@ -505,6 +425,89 @@ ${sections.join('\n\n')}
       }
     }
     return result
+  }
+
+  async scanWikiCategories(): Promise<string[]> {
+    try {
+      const entries = await this.fileOps.listDir(this.basePath)
+      const categories: string[] = []
+      for (const entry of entries) {
+        if (entry === 'indice.md' || entry === 'log.md') continue
+        try {
+          await this.fileOps.listDir(this.resolvePath(entry))
+          categories.push(entry)
+        } catch {
+          /* not a directory */
+        }
+      }
+      return categories.sort()
+    } catch {
+      return []
+    }
+  }
+
+  async scanRawCategories(): Promise<string[]> {
+    try {
+      const entries = await this.fileOps.listDir(RAW_BASE)
+      const categories: string[] = []
+      for (const entry of entries) {
+        try {
+          await this.fileOps.listDir(this.resolveRaw(entry))
+          categories.push(entry)
+        } catch {
+          /* not a directory */
+        }
+      }
+      return categories.sort()
+    } catch {
+      return []
+    }
+  }
+
+  async scanQueryCategories(): Promise<string[]> {
+    try {
+      const entries = await this.fileOps.listDir(QUERY_BASE)
+      const categories: string[] = []
+      for (const entry of entries) {
+        try {
+          await this.fileOps.listDir(this.resolveQuery(entry))
+          categories.push(entry)
+        } catch {
+          /* not a directory */
+        }
+      }
+      return categories.sort()
+    } catch {
+      return []
+    }
+  }
+
+  async createWikiCategory(name: string): Promise<void> {
+    const fullPath = this.resolvePath(name)
+    if (await this.fileOps.fileExists(fullPath)) return
+    await this.fileOps.createDir(fullPath)
+    logger.info('WikiManager', `Created wiki category: ${name}`)
+  }
+
+  async deleteWikiCategory(name: string): Promise<void> {
+    const fullPath = this.resolvePath(name)
+    if (!(await this.fileOps.fileExists(fullPath))) return
+    if (this.fileOps.deleteDir) {
+      await this.fileOps.deleteDir(fullPath, true)
+    }
+    logger.info('WikiManager', `Deleted wiki category: ${name}`)
+  }
+
+  private inferRawType(category: string): RawFileInfo['type'] {
+    switch (category) {
+      case 'pdfs': return 'pdf'
+      case 'meetings': return 'meeting'
+      case 'audio': return 'audio'
+      case 'chat': return 'chat'
+      case 'code': return 'code'
+      case 'data': return 'data'
+      default: return 'other'
+    }
   }
 
   async writeQueryPlan(queryId: string, content: string): Promise<void> {
