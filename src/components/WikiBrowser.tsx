@@ -105,7 +105,7 @@ export function WikiBrowser() {
                                 <div
                                   key={subchild.path}
                                   className={`tree-file ${currentPath === subchild.path ? 'active' : ''}`}
-                                  onClick={() => navigateToPage(subchild.path)}
+                                  onClick={() => { navigateToPage(subchild.path); setShowMobileSidebar(false); }}
                                 >
                                   <span className="tree-file-icon">📄</span>
                                   <span>
@@ -117,7 +117,7 @@ export function WikiBrowser() {
                         ) : (
                           <div
                             className={`tree-file ${currentPath === child.path ? 'active' : ''}`}
-                            onClick={() => navigateToPage(child.path)}
+                            onClick={() => { navigateToPage(child.path); setShowMobileSidebar(false); }}
                           >
                             <span className="tree-file-icon">📄</span>
                             <span>{child.name.replace('.md', '')}</span>
