@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useWikiStore } from '../store/useWikiStore'
 import { MarkdownRenderer } from './MarkdownRenderer'
+import { PageEditor } from './PageEditor'
 
 export function WikiBrowser() {
   const {
@@ -13,6 +14,10 @@ export function WikiBrowser() {
     navigateToPage,
     refreshTree,
     refreshIndex,
+    searchResults,
+    search,
+    editingPage,
+    setEditingPage,
   } = useWikiStore()
 
   const [view, setView] = useState<'tree' | 'index' | 'log'>('index')
@@ -20,6 +25,10 @@ export function WikiBrowser() {
     new Set(['wiki']),
   )
   const [showMobileSidebar, setShowMobileSidebar] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [showSearchResults, setShowSearchResults] = useState(false)
+  const searchRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (initialized) {
@@ -27,6 +36,17 @@ export function WikiBrowser() {
       refreshIndex()
     }
   }, [initialized, refreshTree, refreshIndex])
+
+  // Click outside search dropdown to close
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowSearchResults(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const toggleDir = (name: string) => {
     setExpandedDirs((prev) => {
@@ -37,6 +57,30 @@ export function WikiBrowser() {
     })
   }
 
+  const handleSearchChange = async (value: string) => {
+    setSearchTerm(value)
+    if (value.trim().length >= 2) {
+      await search(value)
+      setShowSearchResults(true)
+    } else {
+      setShowSearchResults(false)
+    }
+  }
+
+  const handleSearchResultClick = (path: string) => {
+    setSearchTerm('')
+    setShowSearchResults(false)
+    navigateToPage(path)
+  }
+
+  const handleEditClick = () => {
+    if (currentPath) {
+      setEditingPage(currentPath)
+    }
+  }
+
+  const isEditing = editingPage !== null
+
   return (
     <div className="wiki-browser">
       {showMobileSidebar && (
@@ -46,6 +90,51 @@ export function WikiBrowser() {
         />
       )}
       <div className={`wiki-sidebar${showMobileSidebar ? ' wiki-sidebar-mobile-visible' : ''}`}>
+        {/* Search bar */}
+        <div className="wiki-search-wrapper" ref={searchRef}>
+          <input
+            ref={searchInputRef}
+            type="text"
+            className="wiki-search-input"
+            placeholder="Cerca nel wiki..."
+            value={searchTerm}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            onFocus={() => {
+              if (searchResults.length > 0) setShowSearchResults(true)
+            }}
+          />
+          {showSearchResults && searchResults.length > 0 && (
+            <div className="wiki-search-dropdown">
+              {searchResults.map((result) => (
+                <div
+                  key={result.path}
+                  className="wiki-search-result"
+                  onClick={() => handleSearchResultClick(result.path)}
+                >
+                  <span className="wiki-search-result-title">
+                    {result.title}
+                  </span>
+                  {result.summary && (
+                    <span className="wiki-search-result-summary">
+                      {result.summary.slice(0, 80)}
+                      {result.summary.length > 80 ? '...' : ''}
+                    </span>
+                  )}
+                  <span className="wiki-search-result-path">
+                    {result.category}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          {showSearchResults && searchTerm.trim().length >= 2 && searchResults.length === 0 && (
+            <div className="wiki-search-dropdown wiki-search-no-results">
+              Nessun risultato per "{searchTerm}"
+            </div>
+          )}
+        </div>
+
+        {/* Tabs */}
         <div className="wiki-sidebar-tabs">
           <button
             className={`tab ${view === 'index' ? 'active' : ''}`}
@@ -149,8 +238,22 @@ export function WikiBrowser() {
         >
           ☰
         </button>
-        {currentPage ? (
-          <MarkdownRenderer content={currentPage.content} />
+        {isEditing && currentPage ? (
+          <PageEditor />
+        ) : currentPage ? (
+          <>
+            <div className="wiki-content-header">
+              <h1 className="wiki-page-title">{currentPage.meta.title}</h1>
+              <button
+                className="wiki-edit-btn"
+                onClick={handleEditClick}
+                title="Edit this page"
+              >
+                ✏️ Edit
+              </button>
+            </div>
+            <MarkdownRenderer content={currentPage.content} />
+          </>
         ) : (
           <div className="wiki-empty">
             <h2>Welcome to LLM Wiki</h2>

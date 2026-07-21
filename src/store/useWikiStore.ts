@@ -13,12 +13,15 @@ interface WikiState {
   logContent: string
   searchResults: WikiIndexEntry[]
   initialized: boolean
+  editingPage: string | null
   init: (fileOps: FileOps) => Promise<void>
   navigateToPage: (path: string) => Promise<void>
   refreshTree: () => Promise<void>
   refreshIndex: () => Promise<void>
   refreshLog: () => Promise<void>
   search: (term: string) => Promise<void>
+  updatePage: (path: string, content: string) => Promise<void>
+  setEditingPage: (path: string | null) => void
 }
 
 export const useWikiStore = create<WikiState>((set, get) => ({
@@ -31,6 +34,7 @@ export const useWikiStore = create<WikiState>((set, get) => ({
   logContent: '',
   searchResults: [],
   initialized: false,
+  editingPage: null,
 
   init: async (fileOps) => {
     const wm = new WikiManager(fileOps)
@@ -39,8 +43,8 @@ export const useWikiStore = create<WikiState>((set, get) => ({
     const indexContent = await wm.getIndex()
     const logContent = await wm.getLog()
     const wi = new WikiIndex()
-    const thematicWikis = ['ai-news', 'strumenti-ai', 'concetti']
-    for (const wiki of thematicWikis) {
+    const wikis = await wm.listThematicWikis()
+    for (const wiki of wikis) {
       try {
         const content = await wm.readFile(`wiki/${wiki}/indice_wiki.md`)
         wi.addFromMarkdown(content, wiki)
@@ -66,7 +70,7 @@ export const useWikiStore = create<WikiState>((set, get) => ({
     for (const p of tryPaths) {
       const page = await wm.readPage(p)
       if (page) {
-        set({ currentPage: page, currentPath: p })
+        set({ currentPage: page, currentPath: p, editingPage: null })
         return
       }
     }
@@ -88,9 +92,9 @@ export const useWikiStore = create<WikiState>((set, get) => ({
         },
         content: `# ${title}\n\n\`\`\`\n${content.slice(0, 10000)}\n\`\`\``,
       }
-      set({ currentPage: rawPage, currentPath: path })
+      set({ currentPage: rawPage, currentPath: path, editingPage: null })
     } catch {
-      set({ currentPage: null, currentPath: path })
+      set({ currentPage: null, currentPath: path, editingPage: null })
     }
   },
 
@@ -106,8 +110,8 @@ export const useWikiStore = create<WikiState>((set, get) => ({
     if (!wm) return
     const indexContent = await wm.getIndex()
     const wi = new WikiIndex()
-    const thematicWikis = ['ai-news', 'strumenti-ai', 'concetti']
-    for (const wiki of thematicWikis) {
+    const wikis = await wm.listThematicWikis()
+    for (const wiki of wikis) {
       try {
         const content = await wm.readFile(`wiki/${wiki}/indice_wiki.md`)
         wi.addFromMarkdown(content, wiki)
@@ -129,5 +133,21 @@ export const useWikiStore = create<WikiState>((set, get) => ({
     const wi = get().wikiIndex
     const results = wi.search(term)
     set({ searchResults: results })
+  },
+
+  updatePage: async (path, content) => {
+    const wm = get().wikiManager
+    if (!wm) return
+    await wm.writePage(path, content)
+    // Refresh the current page display
+    const page = await wm.readPage(path)
+    set({ currentPage: page, currentPath: path, editingPage: null })
+    // Refresh tree and index to reflect changes
+    get().refreshTree()
+    get().refreshIndex()
+  },
+
+  setEditingPage: (path) => {
+    set({ editingPage: path })
   },
 }))
