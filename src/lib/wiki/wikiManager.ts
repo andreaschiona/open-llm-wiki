@@ -187,7 +187,7 @@ ${sections}
 
   async getTree(): Promise<WikiTreeNode[]> {
     const wikiNode = await this.buildDirTree(this.basePath, 'wiki')
-    return [wikiNode]
+    return wikiNode ? [wikiNode] : []
   }
 
   private async buildDirTree(dirPath: string, displayPath: string): Promise<WikiTreeNode | null> {
