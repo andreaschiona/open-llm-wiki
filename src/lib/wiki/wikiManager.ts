@@ -186,21 +186,11 @@ ${sections}
   }
 
   async getTree(): Promise<WikiTreeNode[]> {
-    const root: WikiTreeNode[] = []
-
     const wikiNode = await this.buildDirTree(this.basePath, 'wiki')
-    root.push(wikiNode)
-
-    const rawNode = await this.buildDirTree(RAW_BASE, 'raw')
-    root.push(rawNode)
-
-    const queryNode = await this.buildDirTree(QUERY_BASE, 'query')
-    root.push(queryNode)
-
-    return root
+    return [wikiNode]
   }
 
-  private async buildDirTree(dirPath: string, displayPath: string): Promise<WikiTreeNode> {
+  private async buildDirTree(dirPath: string, displayPath: string): Promise<WikiTreeNode | null> {
     const name = dirPath.split('/').pop() || dirPath
     const node: WikiTreeNode = {
       name,
@@ -216,8 +206,11 @@ ${sections}
         try {
           await this.fileOps.listDir(fullPath)
           const childNode = await this.buildDirTree(fullPath, childDisplayPath)
-          node.children!.push(childNode)
+          if (childNode) {
+            node.children!.push(childNode)
+          }
         } catch {
+          // file
           node.children!.push({
             name: entry,
             path: childDisplayPath,
@@ -227,6 +220,10 @@ ${sections}
       }
     } catch {
       /* directory doesn't exist */
+    }
+    // Skip empty directories and internal non-md files
+    if (node.type === 'directory' && node.children!.length === 0) {
+      return null
     }
     return node
   }
