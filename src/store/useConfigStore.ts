@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { LLMProviderConfig } from '../types'
+import type { LLMProviderConfig, RoutingRule } from '../types'
 import { ConfigManager } from '../lib/config/configManager'
 import { logger } from '../lib/utils/logger'
 import type { FileOps } from '../lib/wiki/wikiManager'
@@ -14,6 +14,8 @@ interface ConfigState {
   initialized: boolean
   githubToken: string
   workDir: string
+  thematicCategories: string[]
+  routingRules: RoutingRule[]
   init: (fileOps: FileOps) => Promise<void>
   addProvider: (provider: LLMProviderConfig) => Promise<void>
   updateProvider: (
@@ -25,6 +27,10 @@ interface ConfigState {
   getActiveProvider: () => LLMProviderConfig | undefined
   setGitHubToken: (token: string) => Promise<void>
   setWorkDir: (dir: string) => Promise<void>
+  setThematicCategories: (categories: string[]) => Promise<void>
+  addThematicCategory: (name: string) => Promise<void>
+  removeThematicCategory: (name: string) => Promise<void>
+  setRoutingRules: (rules: RoutingRule[]) => Promise<void>
 }
 
 function loadGitHubToken(): string {
@@ -74,6 +80,8 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   initialized: false,
   githubToken: '',
   workDir: '',
+  thematicCategories: ['ai-news', 'strumenti-ai', 'concetti'],
+  routingRules: [],
 
   init: async (fileOps) => {
     const cm = new ConfigManager(fileOps)
@@ -87,6 +95,8 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
       activeProviderId: cm.getActiveProvider()?.id || null,
       githubToken: token,
       workDir: dir,
+      thematicCategories: cm.getThematicCategories(),
+      routingRules: cm.getRoutingRules(),
       initialized: true,
     })
   },
@@ -152,5 +162,38 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
     }
     saveWorkDir(dir)
     set({ workDir: dir })
+  },
+
+  setThematicCategories: async (categories: string[]) => {
+    const cm = get().configManager
+    if (cm) {
+      await cm.setThematicCategories(categories)
+    }
+    set({ thematicCategories: [...categories] })
+  },
+
+  addThematicCategory: async (name: string) => {
+    const cm = get().configManager
+    if (!cm) return
+    const categories = cm.getThematicCategories()
+    if (categories.includes(name)) return
+    await cm.setThematicCategories([...categories, name])
+    set({ thematicCategories: cm.getThematicCategories() })
+  },
+
+  removeThematicCategory: async (name: string) => {
+    const cm = get().configManager
+    if (!cm) return
+    const categories = cm.getThematicCategories().filter((c) => c !== name)
+    await cm.setThematicCategories(categories)
+    set({ thematicCategories: cm.getThematicCategories() })
+  },
+
+  setRoutingRules: async (rules: RoutingRule[]) => {
+    const cm = get().configManager
+    if (cm) {
+      await cm.setRoutingRules(rules)
+    }
+    set({ routingRules: rules.map((r) => ({ ...r })) })
   },
 }))

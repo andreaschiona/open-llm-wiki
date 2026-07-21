@@ -5,7 +5,7 @@ import { useWikiStore } from '../store/useWikiStore'
 import { createProvider } from '../lib/llm/providerFactory'
 import { WikiLint } from '../lib/wiki/wikiLint'
 import { logger } from '../lib/utils/logger'
-import type { LLMProviderConfig, LintResult } from '../types'
+import type { LLMProviderConfig, LintResult, RoutingRule } from '../types'
 
 function isTauri(): boolean {
   return (
@@ -27,11 +27,17 @@ export function SettingsPanel() {
     providers,
     initialized,
     githubToken,
+    thematicCategories,
+    routingRules,
     addProvider,
     updateProvider,
     removeProvider,
     setActiveProvider,
     setGitHubToken,
+    setThematicCategories,
+    addThematicCategory,
+    removeThematicCategory,
+    setRoutingRules,
   } = useConfigStore()
 
   const { wikiManager, refreshTree, refreshIndex } = useWikiStore()
@@ -62,6 +68,12 @@ export function SettingsPanel() {
   const [lintResult, setLintResult] = useState<LintResult | null>(null)
   const [lintProgress, setLintProgress] = useState('')
   const [fixing, setFixing] = useState(false)
+
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [addingCategory, setAddingCategory] = useState(false)
+  const [newRulePattern, setNewRulePattern] = useState('')
+  const [newRuleTarget, setNewRuleTarget] = useState('')
+  const [addingRule, setAddingRule] = useState(false)
 
   const defaultNewProvider: LLMProviderConfig = {
     id: '',
@@ -145,6 +157,61 @@ export function SettingsPanel() {
     await setWorkDir('')
     setWorkDirSaved(true)
     setTimeout(() => setWorkDirSaved(false), 2000)
+  }
+
+  const handleAddCategory = async () => {
+    const name = newCategoryName.trim().toLowerCase().replace(/\s+/g, '-')
+    if (!name || thematicCategories.includes(name)) return
+    setAddingCategory(true)
+    try {
+      const { wikiManager } = useWikiStore.getState()
+      if (wikiManager) {
+        await wikiManager.createWikiCategory(name)
+      }
+      await addThematicCategory(name)
+      await refreshTree()
+      setNewCategoryName('')
+    } finally {
+      setAddingCategory(false)
+    }
+  }
+
+  const handleRemoveCategory = async (name: string) => {
+    const confirmed = window.confirm(
+      `Remove category "${name}"? This will delete all files in wiki/${name}.`,
+    )
+    if (!confirmed) return
+    try {
+      const { wikiManager } = useWikiStore.getState()
+      if (wikiManager) {
+        await wikiManager.deleteWikiCategory(name)
+      }
+      await removeThematicCategory(name)
+      await refreshTree()
+      await refreshIndex()
+    } catch (err) {
+      logger.error('SettingsPanel', `Failed to remove category ${name}`, err)
+    }
+  }
+
+  const handleAddRule = async () => {
+    const pattern = newRulePattern.trim()
+    const target = newRuleTarget.trim()
+    if (!pattern || !target) return
+    setAddingRule(true)
+    try {
+      const newRules = [...routingRules, { pattern, target }]
+      await setRoutingRules(newRules)
+      setNewRulePattern('')
+      setNewRuleTarget('')
+    } finally {
+      setAddingRule(false)
+    }
+  }
+
+  const handleRemoveRule = async (index: number) => {
+    const newRules = routingRules.filter((_, i) => i !== index)
+    await setRoutingRules(newRules)
   }
 
   const handleCleanWiki = async () => {
@@ -455,6 +522,109 @@ export function SettingsPanel() {
             </button>
           </div>
           {githubToken && <p className="token-status ok">Token configured</p>}
+        </div>
+      </section>
+
+      <section className="settings-section">
+        <div className="settings-section-header">
+          <h3>Wiki Categories</h3>
+          <button
+            className="btn btn-small"
+            onClick={handleAddCategory}
+            disabled={addingCategory || !newCategoryName.trim()}
+          >
+            {addingCategory ? 'Adding...' : '+ Add Category'}
+          </button>
+        </div>
+        <p className="settings-description">
+          Manage thematic wiki categories. Each category creates a directory
+          under <code>wiki/</code>. Removing a category deletes its files.
+        </p>
+        <div className="category-input-row">
+          <input
+            type="text"
+            className="input-field"
+            value={newCategoryName}
+            onChange={(e) => setNewCategoryName(e.target.value)}
+            placeholder="New category name (e.g. deep-learning)"
+            onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
+          />
+        </div>
+        <div className="categories-list">
+          {thematicCategories.map((cat) => (
+            <div key={cat} className="category-item">
+              <span className="category-name">{cat}</span>
+              <button
+                className="btn-tiny btn-danger"
+                onClick={() => handleRemoveCategory(cat)}
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+          {thematicCategories.length === 0 && (
+            <p className="empty-state">No categories configured.</p>
+          )}
+        </div>
+      </section>
+
+      <section className="settings-section">
+        <div className="settings-section-header">
+          <h3>Routing Rules</h3>
+          <button
+            className="btn btn-small"
+            onClick={handleAddRule}
+            disabled={addingRule || !newRulePattern.trim() || !newRuleTarget.trim()}
+          >
+            {addingRule ? 'Adding...' : '+ Add Rule'}
+          </button>
+        </div>
+        <p className="settings-description">
+          Define rules to route ingested sources to specific wiki categories.
+          If a source URL, hostname, or tag matches a rule pattern, it is
+          routed to the target category. Falls back to built-in heuristics
+          when no rule matches.
+        </p>
+        <div className="rule-input-row">
+          <input
+            type="text"
+            className="input-field"
+            value={newRulePattern}
+            onChange={(e) => setNewRulePattern(e.target.value)}
+            placeholder="Pattern (keyword in URL/tag)"
+          />
+          <select
+            className="input-field"
+            value={newRuleTarget}
+            onChange={(e) => setNewRuleTarget(e.target.value)}
+          >
+            <option value="">Select target...</option>
+            {thematicCategories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="rules-list">
+          {routingRules.map((rule, i) => (
+            <div key={i} className="rule-item">
+              <span className="rule-pattern">{rule.pattern}</span>
+              <span className="rule-arrow">&rarr;</span>
+              <span className="rule-target">{rule.target}</span>
+              <button
+                className="btn-tiny btn-danger"
+                onClick={() => handleRemoveRule(i)}
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+          {routingRules.length === 0 && (
+            <p className="empty-state">
+              No custom routing rules. Built-in heuristics will be used.
+            </p>
+          )}
         </div>
       </section>
 

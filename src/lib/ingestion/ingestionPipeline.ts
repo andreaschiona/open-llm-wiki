@@ -125,6 +125,8 @@ export class IngestionPipeline {
 
       const safeName = sanitizeFilename(title)
       const targetWiki = detectTargetWiki(source, analysis.tags)
+      await this.wikiManager.createWikiCategory(targetWiki)
+      await this.wikiManager.createWikiCategory('concetti')
       const pagePath = `${targetWiki}/${safeName}.md`
       const today = new Date().toISOString().split('T')[0]
 
