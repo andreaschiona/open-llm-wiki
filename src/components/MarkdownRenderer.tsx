@@ -5,6 +5,7 @@ import { useWikiStore } from '../store/useWikiStore'
 
 interface MarkdownRendererProps {
   content: string
+  currentPath?: string | null
 }
 
 interface WikiLinkInfo {
@@ -28,12 +29,35 @@ function extractWikiLinks(content: string): WikiLinkInfo[] {
   return links
 }
 
-function resolveWikiPath(target: string): string {
-  const pageName = target.endsWith('.md') ? target : `${target}.md`
-  return pageName.startsWith('wiki/') ? pageName : `wiki/${pageName}`
+function resolveRelativePath(basePath: string, target: string): string {
+  const parts = basePath.split('/')
+  parts.pop()
+
+  if (target.startsWith('./')) {
+    target = target.slice(2)
+  }
+
+  while (target.startsWith('../')) {
+    if (parts.length > 0) parts.pop()
+    target = target.slice(3)
+  }
+
+  return parts.length > 0 ? [...parts, target].join('/') : target
 }
 
-export function MarkdownRenderer({ content }: MarkdownRendererProps) {
+function resolveWikiPath(target: string, currentPath?: string | null): string {
+  const pageName = target.endsWith('.md') ? target : `${target}.md`
+
+  if (pageName.startsWith('wiki/')) return pageName
+
+  if (currentPath && (pageName.startsWith('./') || pageName.startsWith('../'))) {
+    return resolveRelativePath(currentPath, pageName)
+  }
+
+  return `wiki/${pageName}`
+}
+
+export function MarkdownRenderer({ content, currentPath }: MarkdownRendererProps) {
   const navigateToPage = useWikiStore((s) => s.navigateToPage)
   const wikiManager = useWikiStore((s) => s.wikiManager)
 
@@ -63,7 +87,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
 
       for (const link of links) {
         if (cancelled) return
-        const wikiPath = resolveWikiPath(link.target)
+        const wikiPath = resolveWikiPath(link.target, currentPath)
         try {
           const page = await wm.readPage(wikiPath)
           existence[link.target] = page !== null
@@ -82,12 +106,12 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
     return () => {
       cancelled = true
     }
-  }, [content, wikiManager])
+  }, [content, wikiManager, currentPath])
 
   const handleWikiLink = async (raw: string) => {
     const pipeIdx = raw.indexOf('|')
     const pageName = pipeIdx >= 0 ? raw.slice(0, pipeIdx).trim() : raw.trim()
-    const wikiPath = resolveWikiPath(pageName)
+    const wikiPath = resolveWikiPath(pageName, currentPath)
     navigateToPage(wikiPath)
   }
 
@@ -102,7 +126,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
         return (
           <a
             href="#"
-            data-wikilink={resolveWikiPath(target)}
+            data-wikilink={resolveWikiPath(target, currentPath)}
             className={`wikilink ${exists === false ? 'wikilink-red' : ''}`}
             onClick={(e) => {
               e.preventDefault()
@@ -119,12 +143,15 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
         !href.startsWith('https://') &&
         !href.startsWith('mailto:')
       ) {
+        const resolvedHref = currentPath
+          ? resolveRelativePath(currentPath, href)
+          : href
         return (
           <a
             href="#"
             onClick={(e) => {
               e.preventDefault()
-              navigateToPage(href)
+              navigateToPage(resolvedHref)
             }}
           >
             {children}
