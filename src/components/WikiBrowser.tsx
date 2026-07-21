@@ -20,7 +20,7 @@ export function WikiBrowser() {
     setEditingPage,
   } = useWikiStore()
 
-  const [view, setView] = useState<'tree' | 'index' | 'log'>('index')
+  const [view, setView] = useState<'wiki' | 'log'>('wiki')
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(
     new Set(['wiki']),
   )
@@ -144,16 +144,10 @@ export function WikiBrowser() {
         {/* Tabs */}
         <div className="wiki-sidebar-tabs">
           <button
-            className={`tab ${view === 'index' ? 'active' : ''}`}
-            onClick={() => setView('index')}
+            className={`tab ${view === 'wiki' ? 'active' : ''}`}
+            onClick={() => setView('wiki')}
           >
-            Index
-          </button>
-          <button
-            className={`tab ${view === 'tree' ? 'active' : ''}`}
-            onClick={() => setView('tree')}
-          >
-            Files
+            Wiki
           </button>
           <button
             className={`tab ${view === 'log' ? 'active' : ''}`}
@@ -163,71 +157,72 @@ export function WikiBrowser() {
           </button>
         </div>
         <div className="wiki-sidebar-content">
-          {view === 'tree' && (
-            <div className="wiki-tree">
-              {tree.map((node) => (
-                <div key={node.path}>
-                  <div
-                    className="tree-directory"
-                    onClick={() => toggleDir(node.name)}
-                  >
-                    <span
-                      className={`tree-arrow ${expandedDirs.has(node.name) ? 'expanded' : ''}`}
+          {view === 'wiki' && (
+            <div className="wiki-combined-panel">
+              <div className="wiki-index-panel">
+                <MarkdownRenderer content={indexContent} />
+              </div>
+              <div className="wiki-tree-separator" />
+              <div className="wiki-tree">
+                {tree.map((node) => (
+                  <div key={node.path}>
+                    <div
+                      className="tree-directory"
+                      onClick={() => toggleDir(node.name)}
                     >
-                      ▶
-                    </span>
-                    <span className="tree-folder">📁</span>
-                    <span>{node.name}</span>
-                  </div>
-                  {expandedDirs.has(node.name) &&
-                    node.children?.map((child) => (
-                      <div key={child.path}>
-                        {child.type === 'directory' ? (
-                          <>
-                            <div
-                              className="tree-directory tree-subdir"
-                              onClick={() => toggleDir(child.path)}
-                            >
-                              <span
-                                className={`tree-arrow ${expandedDirs.has(child.path) ? 'expanded' : ''}`}
+                      <span
+                        className={`tree-arrow ${expandedDirs.has(node.name) ? 'expanded' : ''}`}
+                      >
+                        ▶
+                      </span>
+                      <span className="tree-folder">📁</span>
+                      <span>{node.name}</span>
+                    </div>
+                    {expandedDirs.has(node.name) &&
+                      node.children?.map((child) => (
+                        <div key={child.path}>
+                          {child.type === 'directory' ? (
+                            <>
+                              <div
+                                className="tree-directory tree-subdir"
+                                onClick={() => toggleDir(child.path)}
                               >
-                                ▶
-                              </span>
-                              <span className="tree-folder">📁</span>
-                              <span>{child.name}</span>
-                            </div>
-                            {expandedDirs.has(child.path) &&
-                              child.children?.map((subchild) => (
-                                <div
-                                  key={subchild.path}
-                                  className={`tree-file ${currentPath === subchild.path ? 'active' : ''}`}
-                                  onClick={() => { navigateToPage(subchild.path); setShowMobileSidebar(false); }}
+                                <span
+                                  className={`tree-arrow ${expandedDirs.has(child.path) ? 'expanded' : ''}`}
                                 >
-                                  <span className="tree-file-icon">📄</span>
-                                  <span>
-                                    {subchild.name.replace('.md', '')}
-                                  </span>
-                                </div>
-                              ))}
-                          </>
-                        ) : (
-                          <div
-                            className={`tree-file ${currentPath === child.path ? 'active' : ''}`}
-                            onClick={() => { navigateToPage(child.path); setShowMobileSidebar(false); }}
-                          >
-                            <span className="tree-file-icon">📄</span>
-                            <span>{child.name.replace('.md', '')}</span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                </div>
-              ))}
-            </div>
-          )}
-          {view === 'index' && (
-            <div className="wiki-index-panel">
-              <MarkdownRenderer content={indexContent} />
+                                  ▶
+                                </span>
+                                <span className="tree-folder">📁</span>
+                                <span>{child.name}</span>
+                              </div>
+                              {expandedDirs.has(child.path) &&
+                                child.children?.map((subchild) => (
+                                  <div
+                                    key={subchild.path}
+                                    className={`tree-file ${currentPath === subchild.path ? 'active' : ''}`}
+                                    onClick={() => { navigateToPage(subchild.path); setShowMobileSidebar(false); }}
+                                  >
+                                    <span className="tree-file-icon">📄</span>
+                                    <span>
+                                      {subchild.name.replace('.md', '')}
+                                    </span>
+                                  </div>
+                                ))}
+                            </>
+                          ) : (
+                            <div
+                              className={`tree-file ${currentPath === child.path ? 'active' : ''}`}
+                              onClick={() => { navigateToPage(child.path); setShowMobileSidebar(false); }}
+                            >
+                              <span className="tree-file-icon">📄</span>
+                              <span>{child.name.replace('.md', '')}</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
           {view === 'log' && (
