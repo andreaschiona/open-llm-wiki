@@ -8,6 +8,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  statuses: write
 
 jobs:
   super-lint:
@@ -41,3 +42,5 @@ jobs:
           VALIDATE_TSX: false
           VALIDATE_JAVASCRIPT_PRETTIER: false
           VALIDATE_TYPESCRIPT_PRETTIER: false
+          VALIDATE_CSS: false
+          VALIDATE_CSS_PRETTIER: false
