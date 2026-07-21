@@ -5,7 +5,7 @@ import { useWikiStore } from '../store/useWikiStore'
 import { createProvider } from '../lib/llm/providerFactory'
 import { WikiLint } from '../lib/wiki/wikiLint'
 import { logger } from '../lib/utils/logger'
-import type { LLMProviderConfig, LintResult, RoutingRule } from '../types'
+import type { LLMProviderConfig, LintResult } from '../types'
 
 function isTauri(): boolean {
   return (
@@ -34,7 +34,6 @@ export function SettingsPanel() {
     removeProvider,
     setActiveProvider,
     setGitHubToken,
-    setThematicCategories,
     addThematicCategory,
     removeThematicCategory,
     setRoutingRules,
