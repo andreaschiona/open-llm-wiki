@@ -1267,6 +1267,36 @@ body,
     background: var(--bg-tertiary);
   }
 
+  /* Close button inside mobile sidebar */
+  .wiki-sidebar-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 20px;
+    z-index: 10;
+    min-width: 44px;
+    min-height: 44px;
+    transition: background 0.15s;
+  }
+
+  .wiki-sidebar-close:hover {
+    background: var(--border);
+  }
+
+  .wiki-sidebar-close:active {
+    background: var(--bg-tertiary);
+  }
+
   /* General mobile typography */
   html,
   body,
@@ -1375,6 +1405,10 @@ body,
 
 /* Desktop: hide mobile-only elements */
 .wiki-mobile-toggle {
+  display: none;
+}
+
+.wiki-sidebar-close {
   display: none;
 }
 
