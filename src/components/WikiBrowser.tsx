@@ -90,6 +90,13 @@ export function WikiBrowser() {
         />
       )}
       <div className={`wiki-sidebar${showMobileSidebar ? ' wiki-sidebar-mobile-visible' : ''}`}>
+        <button
+          className="wiki-sidebar-close"
+          onClick={() => setShowMobileSidebar(false)}
+          aria-label="Close sidebar"
+        >
+          ✕
+        </button>
         {/* Search bar */}
         <div className="wiki-search-wrapper" ref={searchRef}>
           <input
