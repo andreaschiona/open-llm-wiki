@@ -254,7 +254,7 @@ export function WikiBrowser() {
                 ✏️ Edit
               </button>
             </div>
-            <MarkdownRenderer content={currentPage.content} />
+            <MarkdownRenderer content={currentPage.content} currentPath={currentPath} />
           </>
         ) : (
           <div className="wiki-empty">

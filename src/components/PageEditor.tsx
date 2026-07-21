@@ -87,7 +87,7 @@ export function PageEditor() {
         {showPreview && (
           <div className="page-editor-preview">
             <div className="page-editor-preview-label">Preview</div>
-            <MarkdownRenderer content={content} />
+            <MarkdownRenderer content={content} currentPath={currentPath} />
           </div>
         )}
       </div>
