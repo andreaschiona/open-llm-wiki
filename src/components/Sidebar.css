@@ -103,10 +103,26 @@
     border-right: none;
     border-top: 1px solid var(--border);
     z-index: 1000;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-top: env(safe-area-inset-top, 0px);
   }
 
   .sidebar-header {
-    display: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-bottom: none;
+    flex-shrink: 0;
+  }
+
+  .sidebar-header .sidebar-logo {
+    width: 20px;
+    height: 20px;
+  }
+
+  .sidebar-header .sidebar-title {
+    font-size: 12px;
   }
 
   .sidebar-nav {
