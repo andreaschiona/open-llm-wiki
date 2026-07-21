@@ -12,6 +12,13 @@ You are handling a `/oc` slash command. You MUST:
 If the command is `analyze` or `plan`, your job is DONE after posting one comment via `gh issue comment`.
 DO NOT touch any source code files for analyze or plan commands.
 
+## IMPORTANT: Auto-update disabled
+
+The `autoupdate` option in `opencode.json` is set to `false`. Do NOT attempt to update the
+`@opencode-ai/plugin` version in `.opencode/package.json`. If you see that file change, skip it.
+The plugin version should only be updated manually by the repo owner. Any auto-update would
+create a noise PR with no real changes, which is not desired.
+
 ## Project Overview
 
 This project uses Node.js with a Tauri (Rust) backend.
