@@ -122,8 +122,11 @@ ${wikiContext || 'No relevant wiki pages found.'}`
           const msgs = useChatStore.getState().messages
           const lastIdx = msgs.length - 1
           if (lastIdx >= 0 && msgs[lastIdx].role === 'assistant') {
-            msgs[lastIdx].content = fullResponse
-            useChatStore.setState({ messages: [...msgs] })
+            useChatStore.setState({
+              messages: msgs.map((m, i) =>
+                i === lastIdx ? { ...m, content: fullResponse } : m,
+              ),
+            })
           }
         },
       )
@@ -133,9 +136,17 @@ ${wikiContext || 'No relevant wiki pages found.'}`
         const msgs = useChatStore.getState().messages
         const lastIdx = msgs.length - 1
         if (lastIdx >= 0 && msgs[lastIdx].role === 'assistant') {
-          msgs[lastIdx].content =
-            'Il provider LLM ha bloccato la risposta per motivi di sicurezza. Prova a riformulare la domanda o verifica che il contenuto del wiki non contenga informazioni problematiche.'
-          useChatStore.setState({ messages: [...msgs] })
+          useChatStore.setState({
+            messages: msgs.map((m, i) =>
+              i === lastIdx
+                ? {
+                    ...m,
+                    content:
+                      'Il provider LLM ha bloccato la risposta per motivi di sicurezza. Prova a riformulare la domanda o verifica che il contenuto del wiki non contenga informazioni problematiche.',
+                  }
+                : m,
+            ),
+          })
         }
         return
       }
@@ -143,8 +154,11 @@ ${wikiContext || 'No relevant wiki pages found.'}`
       const finalMessages = useChatStore.getState().messages
       const lastIdx = finalMessages.length - 1
       if (lastIdx >= 0 && finalMessages[lastIdx].role === 'assistant') {
-        finalMessages[lastIdx].content = finalContent
-        useChatStore.setState({ messages: [...finalMessages] })
+        useChatStore.setState({
+          messages: finalMessages.map((m, i) =>
+            i === lastIdx ? { ...m, content: finalContent } : m,
+          ),
+        })
       }
     } catch (err) {
       addMessage({
