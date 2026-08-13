@@ -383,11 +383,15 @@ export class WikiLint {
   private extractAssertiveNumbers(content: string): Map<string, string> {
     const map = new Map<string, string>()
     const pattern =
-      /(?:population|popolazione|count|numero|amount|importo|value|valore|total|totale|cost|costo|price|prezzo|size|dimensione|year|anno|version|versione)[:\s]+([\d,]+(?:\.\d+)?)/gi
+      /\b(?:population|popolazione|count|numero|amount|importo|value|valore|total|totale|cost|costo|price|prezzo|size|dimensione|year|anno|version|versione)\s*:\s*(\d{1,3}(?:[,\d]*\.?\d*)?)\b/gi
     let match: RegExpExecArray | null
     while ((match = pattern.exec(content)) !== null) {
       const key = match[0].split(/[:]/)[0].trim().toLowerCase()
-      map.set(key, match[1])
+      const rawValue = match[1]
+      // Skip obviously invalid extractions — value must contain at least one digit
+      if (rawValue && /^\d/.test(rawValue)) {
+        map.set(key, rawValue)
+      }
     }
     return map
   }
